@@ -6,7 +6,7 @@ import { ArrowLeft, Wallet } from "lucide-react";
 import BottomNav from "../components/BottomNav";
 import StakingPanel from "../components/StakingPanel";
 
-// Wallet icons
+// icons
 import MetaMaskIcon from "../assets/Wallet/MetaMask.png";
 import CoinbaseIcon from "../assets/Wallet/Coinbase.png";
 import WalletConnectIcon from "../assets/Wallet/WalletConnect.png";
@@ -20,53 +20,41 @@ export default function WalletPage() {
 
   const isConnectingRef = useRef(false);
 
-  // -----------------------------
-  // Detect Telegram WebApp
-  // -----------------------------
+  // detect telegram
   const isTelegram =
     typeof window !== "undefined" &&
     window.Telegram?.WebApp;
 
-  // -----------------------------
-  // Filter connectors per environment
-  // -----------------------------
-  const allowedConnectors = connectors.filter((c) => {
-    if (isTelegram) {
-      return c.id === "walletConnect";
-    }
-    return true;
-  });
-
-  // -----------------------------
-  // Clear WalletConnect cache (fix JWT + session issues)
-  // -----------------------------
+  // clear wallet cache once
   useEffect(() => {
     localStorage.removeItem("walletconnect");
-    localStorage.removeItem("WALLETCONNECT_DEEPLINK_CHOICE");
     sessionStorage.clear();
   }, []);
 
-  // -----------------------------
-  // Safe connect handler
-  // -----------------------------
-  const handleConnect = async (connectorId) => {
+  // ----------------------------
+  // SAFE CONNECT HANDLER
+  // ----------------------------
+  const handleConnect = async (type) => {
     if (isConnectingRef.current) return;
 
-    // Telegram restriction
-    if (isTelegram && connectorId !== "walletConnect") {
-      alert("Only WalletConnect is supported in Telegram");
-      return;
-    }
-
-    isConnectingRef.current = true;
-
     try {
-      const connector = connectors.find(
-        (c) => c.id === connectorId
-      );
+      isConnectingRef.current = true;
+
+      // Telegram restriction
+      if (isTelegram && type !== "walletConnect") {
+        alert("Use WalletConnect inside Telegram");
+        return;
+      }
+
+      // IMPORTANT FIX: proper connector matching
+      const connector = connectors.find((c) => {
+        if (type === "metaMaskSDK") return c.id === "metaMaskSDK";
+        if (type === "walletConnect") return c.id === "walletConnect";
+        if (type === "coinbaseWalletSDK") return c.id === "coinbaseWalletSDK";
+      });
 
       if (!connector) {
-        console.error("Connector not found:", connectorId);
+        console.error("Connector not found:", type);
         return;
       }
 
@@ -77,7 +65,7 @@ export default function WalletPage() {
       console.log("✅ Connected:", address);
 
     } catch (err) {
-      console.error("❌ Wallet error:", err);
+      console.error("❌ Connect error:", err);
     } finally {
       isConnectingRef.current = false;
     }
@@ -130,6 +118,7 @@ export default function WalletPage() {
               Disconnect
             </button>
           )}
+
         </div>
       </div>
 
@@ -138,21 +127,16 @@ export default function WalletPage() {
 
         <div className="grid grid-cols-3 gap-3">
 
-          {/* MetaMask */}
+          {/* METAMASK */}
           <button
-            disabled={isTelegram}
             onClick={() => handleConnect("metaMaskSDK")}
-            className={`bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center transition ${
-              isTelegram
-                ? "opacity-40 cursor-not-allowed"
-                : "hover:border-orange-500"
-            }`}
+            className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center hover:border-orange-500 transition"
           >
             <img src={MetaMaskIcon} className="w-12 h-12 mb-2" />
             <span className="text-sm">MetaMask</span>
           </button>
 
-          {/* WalletConnect */}
+          {/* WALLETCONNECT */}
           <button
             onClick={() => handleConnect("walletConnect")}
             className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center hover:border-purple-500 transition"
@@ -161,15 +145,10 @@ export default function WalletPage() {
             <span className="text-sm">WalletConnect</span>
           </button>
 
-          {/* Coinbase */}
+          {/* COINBASE */}
           <button
-            disabled={isTelegram}
             onClick={() => handleConnect("coinbaseWalletSDK")}
-            className={`bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center transition ${
-              isTelegram
-                ? "opacity-40 cursor-not-allowed"
-                : "hover:border-blue-500"
-            }`}
+            className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center hover:border-blue-500 transition"
           >
             <img src={CoinbaseIcon} className="w-12 h-12 mb-2" />
             <span className="text-sm">Coinbase</span>
@@ -177,11 +156,12 @@ export default function WalletPage() {
 
         </div>
 
-        {(isPending || isConnectingRef.current) && (
+        {isPending && (
           <div className="text-center text-yellow-400 mt-3">
             Connecting wallet...
           </div>
         )}
+
       </div>
 
       {/* STAKING */}
