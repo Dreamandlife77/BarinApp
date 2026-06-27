@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { ArrowLeft, Wallet } from "lucide-react";
 
@@ -8,37 +8,49 @@ import StakingPanel from "../components/StakingPanel";
 
 import MetaMaskIcon from "../assets/Wallet/MetaMask.png";
 import CoinbaseIcon from "../assets/Wallet/Coinbase.png";
+import WalletConnectIcon from "../assets/Wallet/WalletConnect.png";
 
 export default function WalletPage() {
   const navigate = useNavigate();
 
   const { address, isConnected } = useAccount();
-  const { connect, connectors, isPending } = useConnect();
+  const { connectAsync, connectors, isPending } = useConnect();
   const { disconnect } = useDisconnect();
 
-  const [loading, setLoading] = useState(false);
+  const isConnectingRef = useRef(false);
 
   // -----------------------------
-  // DIRECT CONNECT (NO QR)
+  // CONNECT FIX (ALL 3 WORKING)
   // -----------------------------
-  const handleConnect = async (type) => {
+  const handleConnect = async (walletName) => {
+    if (isConnectingRef.current) return;
+
     try {
-      const connector =
-        connectors.find((c) =>
-          c.name.toLowerCase().includes(type)
-        );
+      isConnectingRef.current = true;
+
+      console.log("Available connectors:", connectors);
+
+      const connector = connectors.find((c) =>
+        c.name.toLowerCase().includes(walletName.toLowerCase())
+      );
 
       if (!connector) {
-        console.error("Connector not found:", type);
+        console.error("Connector not found:", walletName);
         return;
       }
 
-      console.log("Connecting:", connector.name);
+      console.log("Connecting to:", connector.name);
 
-      await connect({ connector });
+      const result = await connectAsync({
+        connector,
+      });
+
+      console.log("Connected:", result);
 
     } catch (err) {
-      console.error("Connect error:", err);
+      console.error("Wallet connect error:", err);
+    } finally {
+      isConnectingRef.current = false;
     }
   };
 
@@ -64,6 +76,7 @@ export default function WalletPage() {
         <div className="bg-slate-900 border border-slate-700 rounded-2xl p-4">
 
           <div className="flex items-center gap-3">
+
             <div className="w-12 h-12 rounded-full bg-yellow-500 flex items-center justify-center">
               <Wallet className="text-black" />
             </div>
@@ -79,12 +92,13 @@ export default function WalletPage() {
                   : "Not Connected"}
               </div>
             </div>
+
           </div>
 
           {isConnected && (
             <button
               onClick={() => disconnect()}
-              className="mt-4 w-full py-2 rounded-lg bg-red-500 font-bold"
+              className="mt-4 w-full py-2 bg-red-500 rounded-lg font-bold"
             >
               Disconnect
             </button>
@@ -93,16 +107,25 @@ export default function WalletPage() {
         </div>
       </div>
 
-      {/* WALLET BUTTONS */}
-      <div className="px-4 mt-5 grid grid-cols-2 gap-3">
+      {/* WALLET BUTTONS (ALL WORKING) */}
+      <div className="px-4 mt-5 grid grid-cols-3 gap-3">
 
-        {/* METAMASK */}
+        {/* META MASK */}
         <button
           onClick={() => handleConnect("metamask")}
           className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center hover:border-orange-500"
         >
           <img src={MetaMaskIcon} className="w-12 h-12 mb-2" />
           <span>MetaMask</span>
+        </button>
+
+        {/* WALLETCONNECT */}
+        <button
+          onClick={() => handleConnect("walletconnect")}
+          className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center hover:border-purple-500"
+        >
+          <img src={WalletConnectIcon} className="w-12 h-12 mb-2" />
+          <span>WalletConnect</span>
         </button>
 
         {/* COINBASE */}
