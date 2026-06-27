@@ -1,11 +1,12 @@
 import { useNavigate } from "react-router-dom";
-import React, { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { ArrowLeft, Wallet } from "lucide-react";
 
 import BottomNav from "../components/BottomNav";
 import StakingPanel from "../components/StakingPanel";
 
+// icons
 import MetaMaskIcon from "../assets/Wallet/MetaMask.png";
 import CoinbaseIcon from "../assets/Wallet/Coinbase.png";
 import WalletConnectIcon from "../assets/Wallet/WalletConnect.png";
@@ -17,42 +18,87 @@ export default function WalletPage() {
   const { connectAsync, connectors, isPending } = useConnect();
   const { disconnect } = useDisconnect();
 
+  const [loading, setLoading] = useState(false);
   const isConnectingRef = useRef(false);
 
-  // -----------------------------
-  // CONNECT FIX (ALL 3 WORKING)
-  // -----------------------------
-  const handleConnect = async (walletName) => {
+  // ----------------------------
+  // Detect Telegram environment
+  // ----------------------------
+  const isTelegram =
+    typeof window !== "undefined" &&
+    window.Telegram?.WebApp;
+
+  // ----------------------------
+  // CLEAN WalletConnect sessions (VERY IMPORTANT)
+  // ----------------------------
+  useEffect(() => {
+    const keys = Object.keys(localStorage);
+
+    keys.forEach((key) => {
+      if (
+        key.toLowerCase().includes("walletconnect") ||
+        key.toLowerCase().includes("wc@") ||
+        key.toLowerCase().includes("wagmi")
+      ) {
+        localStorage.removeItem(key);
+      }
+    });
+
+    sessionStorage.clear();
+  }, []);
+
+  // ----------------------------
+  // Debug time (fix JWT issues visibility)
+  // ----------------------------
+  useEffect(() => {
+    const now = new Date();
+
+    console.log("🕒 LOCAL TIME:", now.toString());
+    console.log("🌍 UTC TIME:", now.toUTCString());
+    console.log("⏱ ISO:", now.toISOString());
+    console.log("UNIX:", Math.floor(Date.now() / 1000));
+    console.log("TZ:", Intl.DateTimeFormat().resolvedOptions().timeZone);
+  }, []);
+
+  // ----------------------------
+  // SAFE CONNECT (FIXED)
+  // ----------------------------
+  const handleConnect = async (connectorId) => {
     if (isConnectingRef.current) return;
+    isConnectingRef.current = true;
 
     try {
-      isConnectingRef.current = true;
-
-      console.log("Available connectors:", connectors);
-
-      const connector = connectors.find((c) =>
-        c.name.toLowerCase().includes(walletName.toLowerCase())
+      const connector = connectors.find(
+        (c) => c.id === connectorId
       );
 
       if (!connector) {
-        console.error("Connector not found:", walletName);
+        console.error("Connector not found:", connectorId);
         return;
       }
 
-      console.log("Connecting to:", connector.name);
+      console.log("🔗 Connecting:", connector.name);
 
-      const result = await connectAsync({
-        connector,
-      });
+      const result = await connectAsync({ connector });
 
-      console.log("Connected:", result);
+      console.log("✅ Connected:", result);
 
     } catch (err) {
-      console.error("Wallet connect error:", err);
+      console.error("❌ Wallet error:", err);
     } finally {
       isConnectingRef.current = false;
     }
   };
+
+  // ----------------------------
+  // ONLY SHOW WALLETCONNECT IN TELEGRAM (STABILITY RULE)
+  // ----------------------------
+  const filteredConnectors = connectors.filter((c) => {
+    if (isTelegram) {
+      return c.id === "walletConnect";
+    }
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-[#020617] pb-24 text-white">
@@ -73,10 +119,9 @@ export default function WalletPage() {
 
       {/* STATUS */}
       <div className="px-4">
-        <div className="bg-slate-900 border border-slate-700 rounded-2xl p-4">
+        <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 rounded-2xl p-4">
 
           <div className="flex items-center gap-3">
-
             <div className="w-12 h-12 rounded-full bg-yellow-500 flex items-center justify-center">
               <Wallet className="text-black" />
             </div>
@@ -92,57 +137,70 @@ export default function WalletPage() {
                   : "Not Connected"}
               </div>
             </div>
-
           </div>
 
           {isConnected && (
             <button
               onClick={() => disconnect()}
-              className="mt-4 w-full py-2 bg-red-500 rounded-lg font-bold"
+              className="mt-4 w-full py-2 rounded-lg bg-red-500 text-white font-bold"
             >
               Disconnect
             </button>
           )}
-
         </div>
       </div>
 
-      {/* WALLET BUTTONS (ALL WORKING) */}
-      <div className="px-4 mt-5 grid grid-cols-3 gap-3">
+      {/* WALLET BUTTONS */}
+      <div className="px-4 mt-5">
 
-        {/* META MASK */}
-        <button
-          onClick={() => handleConnect("metamask")}
-          className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center hover:border-orange-500"
-        >
-          <img src={MetaMaskIcon} className="w-12 h-12 mb-2" />
-          <span>MetaMask</span>
-        </button>
+        <div className="grid grid-cols-3 gap-3">
 
-        {/* WALLETCONNECT */}
-        <button
-          onClick={() => handleConnect("walletconnect")}
-          className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center hover:border-purple-500"
-        >
-          <img src={WalletConnectIcon} className="w-12 h-12 mb-2" />
-          <span>WalletConnect</span>
-        </button>
+          {/* MetaMask */}
+          <button
+            disabled={isTelegram}
+            onClick={() => handleConnect("metaMaskSDK")}
+            className={`bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center ${
+              isTelegram ? "opacity-40" : "hover:border-orange-500"
+            }`}
+          >
+            <img src={MetaMaskIcon} className="w-12 h-12 mb-2" />
+            <span className="text-sm">MetaMask</span>
+          </button>
 
-        {/* COINBASE */}
-        <button
-          onClick={() => handleConnect("coinbase")}
-          className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center hover:border-blue-500"
-        >
-          <img src={CoinbaseIcon} className="w-12 h-12 mb-2" />
-          <span>Coinbase</span>
-        </button>
+          {/* WalletConnect (PRIMARY IN TELEGRAM) */}
+          <button
+            onClick={() => handleConnect("walletConnect")}
+            className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center hover:border-purple-500"
+          >
+            <img src={WalletConnectIcon} className="w-12 h-12 mb-2" />
+            <span className="text-sm">WalletConnect</span>
+          </button>
 
+          {/* Coinbase */}
+          <button
+            disabled={isTelegram}
+            onClick={() => handleConnect("coinbaseWalletSDK")}
+            className={`bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center ${
+              isTelegram ? "opacity-40" : "hover:border-blue-500"
+            }`}
+          >
+            <img src={CoinbaseIcon} className="w-12 h-12 mb-2" />
+            <span className="text-sm">Coinbase</span>
+          </button>
+
+        </div>
+
+        {(loading || isPending) && (
+          <div className="text-center text-yellow-400 mt-3">
+            Connecting wallet...
+          </div>
+        )}
       </div>
 
       {/* STAKING */}
       <div className="px-4 mt-6">
         <div className="text-lg font-bold mb-2">
-          BARIN Staking
+          BARIwN Staking
         </div>
 
         <StakingPanel />
