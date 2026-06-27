@@ -6,7 +6,6 @@ import { ArrowLeft, Wallet } from "lucide-react";
 import BottomNav from "../components/BottomNav";
 import StakingPanel from "../components/StakingPanel";
 
-// icons
 import MetaMaskIcon from "../assets/Wallet/MetaMask.png";
 import CoinbaseIcon from "../assets/Wallet/Coinbase.png";
 import WalletConnectIcon from "../assets/Wallet/WalletConnect.png";
@@ -14,93 +13,92 @@ import WalletConnectIcon from "../assets/Wallet/WalletConnect.png";
 export default function WalletPage() {
   const navigate = useNavigate();
 
-  useEffect(() => {
-  const wcKeys = Object.keys(localStorage).filter((k) =>
-    k.includes("walletconnect")
-  );
-
-  if (wcKeys.length > 1) {
-    console.log("🧹 Cleaning duplicate WalletConnect sessions");
-    wcKeys.forEach((k) => localStorage.removeItem(k));
-  }
-}, []);
-
   const { address, isConnected, status } = useAccount();
-  const { connectAsync, connectors, isPending } = useConnect();
+  const { connectAsync, connectors } = useConnect();
   const { disconnect } = useDisconnect();
 
-  const isConnectingRef = useRef(false);
-  const [log, setLog] = useState("");
+  const isConnecting = useRef(false);
+  const [statusText, setStatusText] = useState("");
 
-  // ----------------------------
+  // -----------------------------
   // Detect Telegram
-  // ----------------------------
+  // -----------------------------
   const isTelegram =
     typeof window !== "undefined" &&
     window.Telegram?.WebApp;
 
-    const connectorsToUse = isTelegram
-  ? connectors.filter((c) => c.id === "walletConnect")
-  : connectors;
-
-  // ----------------------------
-  // DEBUG: connection state
-  // ----------------------------
-  useEffect(() => {
-    console.log("Wallet status:", status);
-  }, [status]);
-
-  // ----------------------------
-  // CLEAN OLD WALLET SESSIONS
-  // IMPORTANT for stuck WalletConnect
-  // ----------------------------
-  useEffect(() => {
+  // -----------------------------
+  // CLEAN WALLETCONNECT SESSIONS (CRITICAL FIX)
+  // -----------------------------
+  const clearWalletSessions = () => {
     Object.keys(localStorage).forEach((key) => {
       if (
-        key.toLowerCase().includes("walletconnect") ||
-        key.toLowerCase().includes("wc@") ||
-        key.toLowerCase().includes("wagmi")
+        key.includes("walletconnect") ||
+        key.includes("wc@") ||
+        key.includes("WAGMI")
       ) {
         localStorage.removeItem(key);
       }
     });
 
     sessionStorage.clear();
-  }, []);
+  };
 
-  // ----------------------------
-  // DEBUG TIME (fix WebSocket/JWT confusion)
-  // ----------------------------
   useEffect(() => {
-    const now = new Date();
-
-    console.log("LOCAL:", now.toString());
-    console.log("UTC:", now.toUTCString());
-    console.log("ISO:", now.toISOString());
-    console.log("UNIX:", Math.floor(Date.now() / 1000));
+    clearWalletSessions();
   }, []);
 
-  // ----------------------------
-  // SAFE CONNECT HANDLER
-  // ----------------------------
+  // -----------------------------
+  // AUTO DETECT CONNECTION (FIX TELEGRAM CALLBACK LOSS)
+  // -----------------------------
+  useEffect(() => {
+    if (!isTelegram) return;
+
+    const interval = setInterval(() => {
+      if (isConnected && address) {
+        setStatusText("Wallet connected successfully ✅");
+        clearInterval(interval);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isConnected, address, isTelegram]);
+
+  // -----------------------------
+  // DEBUG STATUS
+  // -----------------------------
+  useEffect(() => {
+    console.log("Wallet status:", status);
+  }, [status]);
+
+  // -----------------------------
+  // CONNECT HANDLER (FIXED + SAFE)
+  // -----------------------------
   const handleConnect = async (id) => {
-  const connector = connectors.find((c) => c.id === id);
+    if (isConnecting.current) return;
+    isConnecting.current = true;
 
-  if (!connector) return;
+    try {
+      const connector = connectors.find((c) => c.id === id);
 
-  try {
-    console.log("🔗 Opening wallet...");
+      if (!connector) {
+        console.error("Connector not found:", id);
+        return;
+      }
 
-    await connectAsync({
-      connector,
-    });
+      setStatusText(`Opening ${connector.name}...`);
 
-    console.log("✅ Wallet connected");
+      await connectAsync({ connector });
 
-  } catch (err) {
-    console.log("❌ Failed:", err);
-  }
-};
+      setStatusText("Waiting for wallet approval...");
+
+    } catch (err) {
+      console.error(err);
+      setStatusText("Connection failed or rejected");
+    } finally {
+      isConnecting.current = false;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#020617] pb-24 text-white">
@@ -129,7 +127,7 @@ export default function WalletPage() {
 
             <div>
               <div className="text-slate-400 text-sm">
-                Connected Wawllet
+                Connected Wallet
               </div>
 
               <div className="text-white font-bold">
@@ -140,6 +138,12 @@ export default function WalletPage() {
             </div>
           </div>
 
+          {statusText && (
+            <div className="text-xs text-yellow-400 mt-2">
+              {statusText}
+            </div>
+          )}
+
           {isConnected && (
             <button
               onClick={() => disconnect()}
@@ -147,13 +151,6 @@ export default function WalletPage() {
             >
               Disconnect
             </button>
-          )}
-
-          {/* DEBUG LOG */}
-          {log && (
-            <div className="text-xs text-yellow-400 mt-2">
-              {log}
-            </div>
           )}
         </div>
       </div>
@@ -163,48 +160,42 @@ export default function WalletPage() {
 
         <div className="grid grid-cols-3 gap-3">
 
-          {/* META MASK */}
+          {/* MetaMask (disabled in Telegram) */}
           <button
             disabled={isTelegram}
             onClick={() => handleConnect("metaMaskSDK")}
             className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center opacity-40"
           >
             <img src={MetaMaskIcon} className="w-12 h-12 mb-2" />
-            <span className="text-sm">MetaMask</span>
+            MetaMask
           </button>
 
-          {/* WALLETCONNECT (ONLY SAFE ONE IN TELEGRAM) */}
+          {/* WalletConnect (MAIN FIX) */}
           <button
             onClick={() => handleConnect("walletConnect")}
             className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center hover:border-purple-500"
           >
             <img src={WalletConnectIcon} className="w-12 h-12 mb-2" />
-            <span className="text-sm">WalletConnect</span>
+            WalletConnect
           </button>
 
-          {/* COINBASE */}
+          {/* Coinbase (disabled in Telegram) */}
           <button
             disabled={isTelegram}
             onClick={() => handleConnect("coinbaseWalletSDK")}
             className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center opacity-40"
           >
             <img src={CoinbaseIcon} className="w-12 h-12 mb-2" />
-            <span className="text-sm">Coinbase</span>
+            Coinbase
           </button>
 
         </div>
-
-        {isPending && (
-          <div className="text-center text-yellow-400 mt-3">
-            Waiting for wallet approval...
-          </div>
-        )}
       </div>
 
       {/* STAKING */}
       <div className="px-4 mt-6">
         <div className="text-lg font-bold mb-2">
-          BARIN Stakinddwg
+          BARIN Staking
         </div>
 
         <StakingPanel />
