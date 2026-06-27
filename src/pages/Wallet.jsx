@@ -173,7 +173,7 @@ export default function WalletPage() {
             className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center hover:border-purple-500"
           >
             <img src={WalletConnectIcon} className="w-12 h-12 mb-2" />
-            <span className="text-sm">WalletConnect</span>
+            <span className="text-sm">WalletCr44onnect</span>
           </button>
 
           {/* Coinbase */}
