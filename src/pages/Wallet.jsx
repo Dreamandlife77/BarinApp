@@ -14,6 +14,17 @@ import WalletConnectIcon from "../assets/Wallet/WalletConnect.png";
 export default function WalletPage() {
   const navigate = useNavigate();
 
+  useEffect(() => {
+  const wcKeys = Object.keys(localStorage).filter((k) =>
+    k.includes("walletconnect")
+  );
+
+  if (wcKeys.length > 1) {
+    console.log("🧹 Cleaning duplicate WalletConnect sessions");
+    wcKeys.forEach((k) => localStorage.removeItem(k));
+  }
+}, []);
+
   const { address, isConnected, status } = useAccount();
   const { connectAsync, connectors, isPending } = useConnect();
   const { disconnect } = useDisconnect();
@@ -27,6 +38,10 @@ export default function WalletPage() {
   const isTelegram =
     typeof window !== "undefined" &&
     window.Telegram?.WebApp;
+
+    const connectorsToUse = isTelegram
+  ? connectors.filter((c) => c.id === "walletConnect")
+  : connectors;
 
   // ----------------------------
   // DEBUG: connection state
@@ -68,35 +83,24 @@ export default function WalletPage() {
   // ----------------------------
   // SAFE CONNECT HANDLER
   // ----------------------------
-  const handleConnect = async (connectorId) => {
-    if (isConnectingRef.current) return;
+  const handleConnect = async (id) => {
+  const connector = connectors.find((c) => c.id === id);
 
-    isConnectingRef.current = true;
+  if (!connector) return;
 
-    try {
-      const connector = connectors.find(
-        (c) => c.id === connectorId
-      );
+  try {
+    console.log("🔗 Opening wallet...");
 
-      if (!connector) {
-        console.error("Connector not found:", connectorId);
-        return;
-      }
+    await connectAsync({
+      connector,
+    });
 
-      setLog(`Connecting with ${connector.name}...`);
+    console.log("✅ Wallet connected");
 
-      const result = await connectAsync({ connector });
-
-      console.log("CONNECTED:", result);
-      setLog("Connected successfully!");
-
-    } catch (err) {
-      console.error("Wallet error:", err);
-      setLog("Connection failed or rejected");
-    } finally {
-      isConnectingRef.current = false;
-    }
-  };
+  } catch (err) {
+    console.log("❌ Failed:", err);
+  }
+};
 
   return (
     <div className="min-h-screen bg-[#020617] pb-24 text-white">
@@ -200,7 +204,7 @@ export default function WalletPage() {
       {/* STAKING */}
       <div className="px-4 mt-6">
         <div className="text-lg font-bold mb-2">
-          BARIN Stakinwg
+          BARIN Stakinddwg
         </div>
 
         <StakingPanel />

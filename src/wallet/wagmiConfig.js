@@ -17,7 +17,11 @@ export const wagmiConfig = createConfig({
 
     walletConnect({
       projectId,
-      showQrModal: true, // IMPORTANT for QR popup
+      showQrModal: true,
+      disableDebug: true,
+      qrModalOptions: {
+        themeMode: "dark",
+      },
     }),
 
     coinbaseWallet({
