@@ -13,66 +13,75 @@ import WalletConnectIcon from "../assets/Wallet/WalletConnect.png";
 
 export default function WalletPage() {
   const navigate = useNavigate();
-//
+
   const { address, isConnected } = useAccount();
   const { connectAsync, connectors, isPending } = useConnect();
   const { disconnect } = useDisconnect();
 
-  const [loading, setLoading] = useState(false);
   const isConnectingRef = useRef(false);
 
   // -----------------------------
-  // Detect Telegram environment Wallet
+  // Detect Telegram WebApp
   // -----------------------------
   const isTelegram =
     typeof window !== "undefined" &&
     window.Telegram?.WebApp;
 
+  // -----------------------------
+  // Filter connectors per environment
+  // -----------------------------
   const allowedConnectors = connectors.filter((c) => {
-  if (isTelegram) {
-    return c.id === "walletConnect";
-  }
-  return true;
-});
+    if (isTelegram) {
+      return c.id === "walletConnect";
+    }
+    return true;
+  });
 
   // -----------------------------
-  // Clear stuck WalletConnect sessions
+  // Clear WalletConnect cache (fix JWT + session issues)
   // -----------------------------
   useEffect(() => {
-    Object.keys(localStorage).forEach((key) => {
-      if (key.toLowerCase().includes("walletconnect")) {
-        localStorage.removeItem(key);
-      }
-    });
-
+    localStorage.removeItem("walletconnect");
+    localStorage.removeItem("WALLETCONNECT_DEEPLINK_CHOICE");
     sessionStorage.clear();
   }, []);
 
   // -----------------------------
   // Safe connect handler
   // -----------------------------
- const handleConnect = async (connectorId) => {
-  if (isConnectingRef.current) return;
+  const handleConnect = async (connectorId) => {
+    if (isConnectingRef.current) return;
 
-  isConnectingRef.current = true;
+    // Telegram restriction
+    if (isTelegram && connectorId !== "walletConnect") {
+      alert("Only WalletConnect is supported in Telegram");
+      return;
+    }
 
-  try {
-    const connector = connectors.find(
-      (c) => c.id === connectorId
-    );
+    isConnectingRef.current = true;
 
-    if (!connector) return;
+    try {
+      const connector = connectors.find(
+        (c) => c.id === connectorId
+      );
 
-    console.log("Connecting:", connector.name);
+      if (!connector) {
+        console.error("Connector not found:", connectorId);
+        return;
+      }
 
-    await connectAsync({ connector });
+      console.log("🔗 Connecting:", connector.name);
 
-  } catch (err) {
-    console.error(err);
-  } finally {
-    isConnectingRef.current = false;
-  }
-};
+      await connectAsync({ connector });
+
+      console.log("✅ Connected:", address);
+
+    } catch (err) {
+      console.error("❌ Wallet error:", err);
+    } finally {
+      isConnectingRef.current = false;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#020617] pb-24 text-white">
@@ -91,12 +100,11 @@ export default function WalletPage() {
         <div className="w-10" />
       </div>
 
-      {/* WALLET STATUS */}
+      {/* STATUS CARD */}
       <div className="px-4">
         <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 rounded-2xl p-4">
 
           <div className="flex items-center gap-3">
-
             <div className="w-12 h-12 rounded-full bg-yellow-500 flex items-center justify-center">
               <Wallet className="text-black" />
             </div>
@@ -112,7 +120,6 @@ export default function WalletPage() {
                   : "Not Connected"}
               </div>
             </div>
-
           </div>
 
           {isConnected && (
@@ -123,7 +130,6 @@ export default function WalletPage() {
               Disconnect
             </button>
           )}
-
         </div>
       </div>
 
@@ -132,19 +138,21 @@ export default function WalletPage() {
 
         <div className="grid grid-cols-3 gap-3">
 
-          {/* META MASK (disabled in Telegram for safety) */}
+          {/* MetaMask */}
           <button
             disabled={isTelegram}
             onClick={() => handleConnect("metaMaskSDK")}
             className={`bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center transition ${
-              isTelegram ? "opacity-40 cursor-not-allowed" : "hover:border-orange-500"
+              isTelegram
+                ? "opacity-40 cursor-not-allowed"
+                : "hover:border-orange-500"
             }`}
           >
             <img src={MetaMaskIcon} className="w-12 h-12 mb-2" />
             <span className="text-sm">MetaMask</span>
           </button>
 
-          {/* WALLETCONNECT (MAIN SAFE OPTION) */}
+          {/* WalletConnect */}
           <button
             onClick={() => handleConnect("walletConnect")}
             className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center hover:border-purple-500 transition"
@@ -153,12 +161,14 @@ export default function WalletPage() {
             <span className="text-sm">WalletConnect</span>
           </button>
 
-          {/* COINBASE (disabled in Telegram) */}
+          {/* Coinbase */}
           <button
             disabled={isTelegram}
             onClick={() => handleConnect("coinbaseWalletSDK")}
             className={`bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center transition ${
-              isTelegram ? "opacity-40 cursor-not-allowed" : "hover:border-blue-500"
+              isTelegram
+                ? "opacity-40 cursor-not-allowed"
+                : "hover:border-blue-500"
             }`}
           >
             <img src={CoinbaseIcon} className="w-12 h-12 mb-2" />
@@ -167,18 +177,16 @@ export default function WalletPage() {
 
         </div>
 
-        {(loading || isPending) && (
+        {(isPending || isConnectingRef.current) && (
           <div className="text-center text-yellow-400 mt-3">
             Connecting wallet...
           </div>
         )}
-
       </div>
 
       {/* STAKING */}
       <div className="px-4 mt-6">
-
-        <div className="mb-2 text-lg font-bold">
+        <div className="text-lg font-bold mb-2">
           BARIN Staking
         </div>
 
