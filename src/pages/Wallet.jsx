@@ -1,71 +1,44 @@
 import { useNavigate } from "react-router-dom";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useState } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { ArrowLeft, Wallet } from "lucide-react";
 
 import BottomNav from "../components/BottomNav";
 import StakingPanel from "../components/StakingPanel";
 
-// images
 import MetaMaskIcon from "../assets/Wallet/MetaMask.png";
 import CoinbaseIcon from "../assets/Wallet/Coinbase.png";
-import WalletConnectIcon from "../assets/Wallet/WalletConnect.png";
 
 export default function WalletPage() {
   const navigate = useNavigate();
 
   const { address, isConnected } = useAccount();
-  const { connectAsync, connectors, isPending } = useConnect();
+  const { connect, connectors, isPending } = useConnect();
   const { disconnect } = useDisconnect();
 
-  const isConnectingRef = useRef(false);
-
-  // detect Telegram
-  const isTelegram =
-    typeof window !== "undefined" &&
-    window.Telegram?.WebApp;
-
-  // clear wallet cache
-  useEffect(() => {
-    localStorage.removeItem("walletconnect");
-    sessionStorage.clear();
-  }, []);
+  const [loading, setLoading] = useState(false);
 
   // -----------------------------
-  // CONNECT HANDLER (FINAL FIX)
+  // DIRECT CONNECT (NO QR)
   // -----------------------------
-  const handleConnect = async (connectorId) => {
-    if (isConnectingRef.current) return;
-
+  const handleConnect = async (type) => {
     try {
-      isConnectingRef.current = true;
-
-      let targetId = connectorId;
-
-      // 🔥 TELEGRAM FIX: force WalletConnect only
-      if (isTelegram) {
-        targetId = "walletConnect";
-      }
-
-      const connector = connectors.find(
-        (c) => c.id === targetId
-      );
+      const connector =
+        connectors.find((c) =>
+          c.name.toLowerCase().includes(type)
+        );
 
       if (!connector) {
-        console.error("Connector not found:", targetId);
+        console.error("Connector not found:", type);
         return;
       }
 
       console.log("Connecting:", connector.name);
 
-      await connectAsync({ connector });
-
-      console.log("Connected:", address);
+      await connect({ connector });
 
     } catch (err) {
-      console.error("Wallet error:", err);
-    } finally {
-      isConnectingRef.current = false;
+      console.error("Connect error:", err);
     }
   };
 
@@ -86,12 +59,11 @@ export default function WalletPage() {
         <div className="w-10" />
       </div>
 
-      {/* WALLET STATUS */}
+      {/* STATUS */}
       <div className="px-4">
-        <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 rounded-2xl p-4">
+        <div className="bg-slate-900 border border-slate-700 rounded-2xl p-4">
 
           <div className="flex items-center gap-3">
-
             <div className="w-12 h-12 rounded-full bg-yellow-500 flex items-center justify-center">
               <Wallet className="text-black" />
             </div>
@@ -107,13 +79,12 @@ export default function WalletPage() {
                   : "Not Connected"}
               </div>
             </div>
-
           </div>
 
           {isConnected && (
             <button
               onClick={() => disconnect()}
-              className="mt-4 w-full py-2 rounded-lg bg-red-500 text-white font-bold"
+              className="mt-4 w-full py-2 rounded-lg bg-red-500 font-bold"
             >
               Disconnect
             </button>
@@ -123,51 +94,32 @@ export default function WalletPage() {
       </div>
 
       {/* WALLET BUTTONS */}
-      <div className="px-4 mt-5">
+      <div className="px-4 mt-5 grid grid-cols-2 gap-3">
 
-        <div className="grid grid-cols-3 gap-3">
+        {/* METAMASK */}
+        <button
+          onClick={() => handleConnect("metamask")}
+          className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center hover:border-orange-500"
+        >
+          <img src={MetaMaskIcon} className="w-12 h-12 mb-2" />
+          <span>MetaMask</span>
+        </button>
 
-          {/* MetaMask */}
-          <button
-            onClick={() => handleConnect("metaMaskSDK")}
-            className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center hover:border-orange-500 transition"
-          >
-            <img src={MetaMaskIcon} className="w-12 h-12 mb-2" />
-            <span className="text-sm">MetaMask</span>
-          </button>
-
-          {/* WalletConnect */}
-          <button
-            onClick={() => handleConnect("walletConnect")}
-            className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center hover:border-purple-500 transition"
-          >
-            <img src={WalletConnectIcon} className="w-12 h-12 mb-2" />
-            <span className="text-sm">WalletConnect</span>
-          </button>
-
-          {/* Coinbase */}
-          <button
-            onClick={() => handleConnect("coinbaseWalletSDK")}
-            className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center hover:border-blue-500 transition"
-          >
-            <img src={CoinbaseIcon} className="w-12 h-12 mb-2" />
-            <span className="text-sm">Coinbase</span>
-          </button>
-
-        </div>
-
-        {isPending && (
-          <div className="text-center text-yellow-400 mt-3">
-            Connecting wallet...
-          </div>
-        )}
+        {/* COINBASE */}
+        <button
+          onClick={() => handleConnect("coinbase")}
+          className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center hover:border-blue-500"
+        >
+          <img src={CoinbaseIcon} className="w-12 h-12 mb-2" />
+          <span>Coinbase</span>
+        </button>
 
       </div>
 
       {/* STAKING */}
       <div className="px-4 mt-6">
         <div className="text-lg font-bold mb-2">
-          BARIN Staking11
+          BARIN Staking
         </div>
 
         <StakingPanel />
