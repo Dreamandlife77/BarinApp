@@ -6,7 +6,7 @@ import { ArrowLeft, Wallet } from "lucide-react";
 import BottomNav from "../components/BottomNav";
 import StakingPanel from "../components/StakingPanel";
 
-// icons
+// images
 import MetaMaskIcon from "../assets/Wallet/MetaMask.png";
 import CoinbaseIcon from "../assets/Wallet/Coinbase.png";
 import WalletConnectIcon from "../assets/Wallet/WalletConnect.png";
@@ -20,52 +20,50 @@ export default function WalletPage() {
 
   const isConnectingRef = useRef(false);
 
-  // detect telegram
+  // detect Telegram
   const isTelegram =
     typeof window !== "undefined" &&
     window.Telegram?.WebApp;
 
-  // clear wallet cache once
+  // clear wallet cache
   useEffect(() => {
     localStorage.removeItem("walletconnect");
     sessionStorage.clear();
   }, []);
 
-  // ----------------------------
-  // SAFE CONNECT HANDLER
-  // ----------------------------
-  const handleConnect = async (type) => {
+  // -----------------------------
+  // CONNECT HANDLER (FINAL FIX)
+  // -----------------------------
+  const handleConnect = async (connectorId) => {
     if (isConnectingRef.current) return;
 
     try {
       isConnectingRef.current = true;
 
-      // Telegram restriction
-      if (isTelegram && type !== "walletConnect") {
-        alert("Use WalletConnect inside Telegram");
-        return;
+      let targetId = connectorId;
+
+      // 🔥 TELEGRAM FIX: force WalletConnect only
+      if (isTelegram) {
+        targetId = "walletConnect";
       }
 
-      // IMPORTANT FIX: proper connector matching
-      const connector = connectors.find((c) => {
-        if (type === "metaMaskSDK") return c.id === "metaMaskSDK";
-        if (type === "walletConnect") return c.id === "walletConnect";
-        if (type === "coinbaseWalletSDK") return c.id === "coinbaseWalletSDK";
-      });
+      const connector = connectors.find(
+        (c) => c.id === targetId
+      );
 
       if (!connector) {
-        console.error("Connector not found:", type);
+        console.error("Connector not found:", targetId);
         return;
       }
 
-      console.log("🔗 Connecting:", connector.name);
+      console.log("Connecting:", connector.name);
 
       await connectAsync({ connector });
 
-      console.log("✅ Connected:", address);
+      console.log("Connected:", address);
 
     } catch (err) {
-      console.error("❌ Connect error:", err);
+      console.error("Wallet error:", err);
     } finally {
       isConnectingRef.current = false;
     }
@@ -88,11 +86,12 @@ export default function WalletPage() {
         <div className="w-10" />
       </div>
 
-      {/* STATUS CARD */}
+      {/* WALLET STATUS */}
       <div className="px-4">
         <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 rounded-2xl p-4">
 
           <div className="flex items-center gap-3">
+
             <div className="w-12 h-12 rounded-full bg-yellow-500 flex items-center justify-center">
               <Wallet className="text-black" />
             </div>
@@ -108,6 +107,7 @@ export default function WalletPage() {
                   : "Not Connected"}
               </div>
             </div>
+
           </div>
 
           {isConnected && (
@@ -122,12 +122,12 @@ export default function WalletPage() {
         </div>
       </div>
 
-      {/* WALLET OPTIONS */}
+      {/* WALLET BUTTONS */}
       <div className="px-4 mt-5">
 
         <div className="grid grid-cols-3 gap-3">
 
-          {/* METAMASK */}
+          {/* MetaMask */}
           <button
             onClick={() => handleConnect("metaMaskSDK")}
             className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center hover:border-orange-500 transition"
@@ -136,7 +136,7 @@ export default function WalletPage() {
             <span className="text-sm">MetaMask</span>
           </button>
 
-          {/* WALLETCONNECT */}
+          {/* WalletConnect */}
           <button
             onClick={() => handleConnect("walletConnect")}
             className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center hover:border-purple-500 transition"
@@ -145,7 +145,7 @@ export default function WalletPage() {
             <span className="text-sm">WalletConnect</span>
           </button>
 
-          {/* COINBASE */}
+          {/* Coinbase */}
           <button
             onClick={() => handleConnect("coinbaseWalletSDK")}
             className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center hover:border-blue-500 transition"
@@ -167,7 +167,7 @@ export default function WalletPage() {
       {/* STAKING */}
       <div className="px-4 mt-6">
         <div className="text-lg font-bold mb-2">
-          BARIN Staking
+          BARIN Staking11
         </div>
 
         <StakingPanel />
