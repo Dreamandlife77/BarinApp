@@ -13,10 +13,12 @@ export const wagmiConfig = createConfig({
     walletConnect({
       projectId,
       showQrModal: true,
+      isNewChainsStale: false, // IMPORTANT FIX
     }),
 
     coinbaseWallet({
       appName: "BARIN Game",
+      reloadOnDisconnect: false,
     }),
   ],
 

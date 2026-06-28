@@ -1,19 +1,26 @@
 import { useEffect, useRef, useState } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 
-import MetaMaskIcon from "../assets/Wallet/MetaMask.png";
-import CoinbaseIcon from "../assets/Wallet/Coinbase.png";
-import WalletConnectIcon from "../assets/Wallet/WalletConnect.png";
-
 export default function Wallet() {
   const { address, isConnected } = useAccount();
   const { connectors, connect } = useConnect();
   const { disconnect } = useDisconnect();
 
-  const isConnecting = useRef(false);
   const [status, setStatus] = useState("Not Connected");
+  const connectingRef = useRef(false);
 
-  // 🔥 AUTO DETECT REAL CONNECTION (MOST IMPORTANT FIX)
+  // 🔥 CRITICAL FIX: FORCE SESSION RECHECK AFTER RETURN
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        window.dispatchEvent(new Event("focus"));
+      }
+    }, 1200);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // 🔥 UPDATE UI FROM REAL STATE
   useEffect(() => {
     if (isConnected && address) {
       setStatus("Connected ✅");
@@ -22,7 +29,7 @@ export default function Wallet() {
     }
   }, [isConnected, address]);
 
-  // 🧹 CLEAN OLD WALLET SESSIONS
+  // 🔥 CLEAN WALLET SESSIONS (PREVENT STUCK STATE)
   useEffect(() => {
     Object.keys(localStorage).forEach((key) => {
       if (key.includes("walletconnect") || key.includes("wc@")) {
@@ -31,41 +38,42 @@ export default function Wallet() {
     });
   }, []);
 
-  // 🔗 SAFE CONNECT
-  const handleConnect = async (id) => {
-    if (isConnecting.current) return;
-    isConnecting.current = true;
+  // 🔥 CONNECT HANDLER
+  const handleConnect = (id) => {
+    if (connectingRef.current) return;
+    connectingRef.current = true;
 
-    try {
-      const connector = connectors.find((c) => c.id === id);
-      if (!connector) return;
+    const connector = connectors.find((c) => c.id === id);
+    if (!connector) return;
 
-      setStatus("Opening wallet...");
+    setStatus("Opening wallet...");
 
-      connect({ connector });
+    connect({ connector });
 
-      // IMPORTANT: DO NOT WAIT FOR RESULT
-      setStatus("Approve in wallet and return to app");
+    setStatus("Approve in wallet and return to app");
 
-    } catch (err) {
-      console.log("connect error (ignored):", err);
-    } finally {
-      isConnecting.current = false;
-    }
+    connectingRef.current = false;
   };
 
   return (
-    <div className="p-4 text-white">
+    <div className="min-h-screen bg-slate-950 text-white p-4">
 
-      {/* STATUS */}
-      <div className="p-4 bg-slate-900 rounded-xl mb-4">
-        <div className="text-sm text-gray-400">Wallet Status</div>
-        <div className="font-bold">
-          {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Not Connected"}
-        </div>
-        <div className="text-yellow-400 text-xs mt-2">
+      {/* STATUS CARD */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-6">
+
+        <h2 className="text-yellow-400 font-bold text-lg">
+          Wallet Status
+        </h2>
+
+        <p className="text-gray-300">
+          {address
+            ? `${address.slice(0, 6)}...${address.slice(-4)}`
+            : "Not Connected"}
+        </p>
+
+        <p className="text-cyan-400 text-sm mt-2">
           {status}
-        </div>
+        </p>
 
         {isConnected && (
           <button
@@ -77,21 +85,27 @@ export default function Wallet() {
         )}
       </div>
 
-      {/* BUTTONS */}
+      {/* WALLET BUTTONS */}
       <div className="grid grid-cols-3 gap-3">
 
-        <button onClick={() => handleConnect("metaMaskSDK")} className="bg-gray-800 p-3 rounded-xl">
-          <img src={MetaMaskIcon} className="w-10 mx-auto" />
+        <button
+          onClick={() => handleConnect("metaMaskSDK")}
+          className="bg-slate-900 border border-slate-700 rounded-xl p-4 hover:border-orange-500"
+        >
           MetaMask
         </button>
 
-        <button onClick={() => handleConnect("walletConnect")} className="bg-gray-800 p-3 rounded-xl">
-          <img src={WalletConnectIcon} className="w-10 mx-auto" />
+        <button
+          onClick={() => handleConnect("walletConnect")}
+          className="bg-slate-900 border border-slate-700 rounded-xl p-4 hover:border-purple-500"
+        >
           WalletConnect
         </button>
 
-        <button onClick={() => handleConnect("coinbaseWalletSDK")} className="bg-gray-800 p-3 rounded-xl">
-          <img src={CoinbaseIcon} className="w-10 mx-auto" />
+        <button
+          onClick={() => handleConnect("coinbaseWalletSDK")}
+          className="bg-slate-900 border border-slate-700 rounded-xl p-4 hover:border-blue-500"
+        >
           Coinbase
         </button>
 
