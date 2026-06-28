@@ -67,7 +67,7 @@ export default function Wallet() {
                                 cursor: "pointer"
                             }}
                         >
-                            Connect Wallet11
+                            Connect Wallet2
                         </button>
 
                         <button

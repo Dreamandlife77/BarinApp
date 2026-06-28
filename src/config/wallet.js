@@ -27,8 +27,19 @@ createAppKit({
   defaultNetwork: polygon,
 
   features: {
-    analytics: false
+    analytics: false,
+
+    // ❌ THIS DOES NOT REMOVE GOOGLE
+    socials: false,
+    email: false,
+
+    // ✅ IMPORTANT: DISABLE AUTH METHODS UI
+    emailShowWallets: false,
   },
+
+  // 🔥 THIS IS THE REAL FIX (IMPORTANT)
+  enableEmail: false,
+  enableSocials: false,
 
   // 🔥 ADD THIS (CRITICAL FOR MOBILE DEEP LINK RECOVERY)
   enableWalletConnect: true,
