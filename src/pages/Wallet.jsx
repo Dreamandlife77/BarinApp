@@ -1,103 +1,80 @@
 import { useEffect, useRef, useState } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 
-import MetaMaskIcon from "../assets/Wallet/MetaMask.png";
-import CoinbaseIcon from "../assets/Wallet/Coinbase.png";
-import WalletConnectIcon from "../assets/Wallet/WalletConnect.png";
-
 export default function Wallet() {
-  const { address, isConnected } = useAccount();
-  const { connect, connectors } = useConnect();
+  const { address, isConnected, status } = useAccount();
+  const { connectors, connect } = useConnect();
   const { disconnect } = useDisconnect();
 
-  const [status, setStatus] = useState("Not Connected");
-  const connectingRef = useRef(false);
+  const [ui, setUi] = useState("Not Connected");
 
-  // ----------------------------
-  // AUTO SYNC CONNECTION STATE (IMPORTANT FIX)
-  // ----------------------------
+  // -------------------------
+  // FORCE RECHECK SESSION (KEY FIX)
+  // -------------------------
+  useEffect(() => {
+    const interval = setInterval(() => {
+      window.dispatchEvent(new Event("focus"));
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // -------------------------
+  // UPDATE UI FROM REAL STATE
+  // -------------------------
   useEffect(() => {
     if (isConnected && address) {
-      setStatus("Connected ✅");
+      setUi("Connected ✅");
     } else {
-      setStatus("Not Connected");
+      setUi("Not Connected");
     }
   }, [isConnected, address]);
 
-  // ----------------------------
-  // CLEAN OLD WALLET SESSIONS
-  // ----------------------------
-  useEffect(() => {
-    Object.keys(localStorage).forEach((key) => {
-      if (key.includes("walletconnect") || key.includes("wc@")) {
-        localStorage.removeItem(key);
-      }
-    });
-  }, []);
+  // -------------------------
+  // CONNECT WALLET
+  // -------------------------
+  const handleConnect = (id) => {
+    const connector = connectors.find((c) => c.id === id);
+    if (!connector) return;
 
-  // ----------------------------
-  // CONNECT HANDLER (SAFE)
-  // ----------------------------
-  const handleConnect = async (id) => {
-    if (connectingRef.current) return;
-    connectingRef.current = true;
+    setUi("Opening wallet...");
 
-    try {
-      const connector = connectors.find((c) => c.id === id);
-      if (!connector) return;
+    connect({ connector });
 
-      setStatus("Opening wallet...");
-
-      // IMPORTANT: do NOT await state here
-      connect({ connector });
-
-      setStatus("Approve in wallet and return manually");
-
-    } catch (err) {
-      console.log("Connect error (ignored):", err);
-      setStatus("Wallet opened — complete approval in app");
-    } finally {
-      connectingRef.current = false;
-    }
+    setUi("Approve in wallet and return here");
   };
 
   return (
     <div style={{ padding: 20, color: "white" }}>
 
-      {/* STATUS */}
-      <div style={{ marginBottom: 20 }}>
-        <h3>Wallet Status</h3>
+      <h2>Wallet Status</h2>
 
-        <p>
-          {address
-            ? `${address.slice(0, 6)}...${address.slice(-4)}`
-            : "Not Connected"}
-        </p>
+      <p>
+        {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "None"}
+      </p>
 
-        <p style={{ color: "orange" }}>{status}</p>
+      <p style={{ color: "orange" }}>{ui}</p>
 
-        {isConnected && (
-          <button onClick={() => disconnect()}>
-            Disconnect
-          </button>
-        )}
-      </div>
-
-      {/* BUTTONS */}
-      <div style={{ display: "flex", gap: 10 }}>
-
-        <button onClick={() => handleConnect("metaMaskSDK")}>
-          <img src={MetaMaskIcon} width={40} />
-          MetaMask
+      {isConnected && (
+        <button onClick={() => disconnect()}>
+          Disconnect
         </button>
+      )}
 
-        <button onClick={() => handleConnect("walletConnect")}>
-          <img src={WalletConnectIcon} width={40} />
-          WalletConnect
-        </button>
+      <hr />
 
+      <button onClick={() => handleConnect("metaMaskSDK")}>
+        MetaMask
+      </button>
 
-      </div>
+      <button onClick={() => handleConnect("walletConnect")}>
+        WalletConnect
+      </button>
+
+      <button onClick={() => handleConnect("coinbaseWalletSDK")}>
+        Coinbase
+      </button>
+
     </div>
   );
 }
