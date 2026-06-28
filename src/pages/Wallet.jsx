@@ -59,9 +59,12 @@ export default function WalletPage() {
         MetaMask
       </button>
 
-      <button onClick={() => handleConnect("walletConnect")}>
-        WalletConnect
-      </button>
+      <button
+  className="text-blue-500 font-bold"
+  onClick={() => handleConnect("walletConnect")}
+>
+  WalletConnect
+</button>
 
       <button onClick={() => handleConnect("coinbaseWalletSDK")}>
         Coinbase
