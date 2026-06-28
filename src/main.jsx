@@ -8,7 +8,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { wagmiConfig } from "./wallet/wagmiConfig";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+      refetchOnWindowFocus: false,
+      staleTime: Infinity,
+    },
+  },
+});
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
