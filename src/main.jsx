@@ -6,17 +6,10 @@ import "./index.css";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
-import { polygon } from "@reown/appkit/networks";
-import "./config/wallet";
+
+import { wagmiAdapter } from "./config/wallet";
 
 const projectId = "beb23aec824ef375771f0418bffcfd14";
-
-
-const wagmiAdapter = new WagmiAdapter({
-  projectId,
-  networks: [polygon],
-});
 
 const queryClient = new QueryClient();
 

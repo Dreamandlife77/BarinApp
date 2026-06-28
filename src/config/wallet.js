@@ -15,7 +15,7 @@ const metadata = {
 
 const wagmiAdapter = new WagmiAdapter({
   projectId,
-  networks: [polygon]
+  networks: [polygon],
 });
 
 createAppKit({

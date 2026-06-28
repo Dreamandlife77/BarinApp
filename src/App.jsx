@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route } from "react-router-dom";
 
 import Splash from "./pages/Splash";
 import Onboarding from "./pages/Onboarding";
@@ -17,20 +17,8 @@ import { useEffect, useState } from "react";
 
 function App() {
 
-  useEffect(() => {
-  try {
-    // Clear ALL wallet sessions
-    localStorage.removeItem("walletconnect");
-    localStorage.removeItem("WALLETCONNECT_DEEPLINK_CHOICE");
-    sessionStorage.clear();
-  } catch (e) {
-    console.log("Wallet reset skipped");
-  }
-}, []);
-
-
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         <Route path="/" element={<Splash />} />
         <Route path="/home" element={<Home />} />
@@ -48,7 +36,7 @@ function App() {
         <Route path="/wallet" element={<WalletPage />}
 />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
