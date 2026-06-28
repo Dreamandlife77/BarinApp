@@ -5,6 +5,12 @@ import API from "../config/api";
 export default function Wallet() {
   const { address, isConnected } = useAccount();
   const { connectors, connect } = useConnect();
+
+  useEffect(() => {
+    alert(
+        connectors.map(c => c.id).join("\n")
+    );
+}, []);
   const { disconnect } = useDisconnect();
 
   const [status, setStatus] = useState("Not Connected");
@@ -21,7 +27,19 @@ export default function Wallet() {
 
     setStatus("Opening wallet...");
 
-    connect({ connector });
+    connect(
+  { connector },
+  {
+    onSuccess(data) {
+      alert("SUCCESS");
+      console.log(data);
+    },
+    onError(error) {
+      alert(error.message);
+      console.log(error);
+    },
+  }
+);
 
     setStatus("Approve wallet and return...");
   };
@@ -124,7 +142,7 @@ export default function Wallet() {
           className="bg-slate-800 p-3 rounded"
           onClick={() => handleConnect("walletConnect")}
         >
-          WalletConnecstdd
+          WalletConnectt
         </button>
 
         <button
