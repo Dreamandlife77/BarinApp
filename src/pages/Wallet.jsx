@@ -10,16 +10,28 @@ import WalletConnectIcon from "../assets/Wallet/WalletConnect.png";
 export default function WalletPage() {
   const navigate = useNavigate();
 
-  const { address, isConnected } = useAccount();
-  const { connectAsync, connectors } = useConnect();
+  const { address, isConnected, status } = useAccount();
+  const { connectors, connect } = useConnect();
   const { disconnect } = useDisconnect();
 
+  const [uiStatus, setUiStatus] = useState("Not Connected");
   const isConnecting = useRef(false);
-  const [status, setStatus] = useState("Not Connected");
 
-  // -----------------------------
-  // CLEAN OLD WALLET SESSIONS
-  // -----------------------------
+  // -------------------------
+  // AUTO UPDATE (IMPORTANT FIX)
+  // -------------------------
+  useEffect(() => {
+    if (isConnected && address) {
+      setUiStatus("Connected ✅");
+      console.log("CONNECTED:", address);
+    } else {
+      setUiStatus("Not Connected");
+    }
+  }, [isConnected, address]);
+
+  // -------------------------
+  // CLEAN WALLET SESSION
+  // -------------------------
   useEffect(() => {
     Object.keys(localStorage).forEach((key) => {
       if (key.includes("walletconnect") || key.includes("wc@")) {
@@ -29,36 +41,37 @@ export default function WalletPage() {
     sessionStorage.clear();
   }, []);
 
-  // -----------------------------
-  // REAL CONNECTION DETECTION
-  // -----------------------------
-  useEffect(() => {
-    if (isConnected && address) {
-      setStatus("Wallet Connected ✅");
-      console.log("CONNECTED:", address);
+  // -------------------------
+  // CONNECT HANDLER (FIXED)
+  // -------------------------
+  const handleConnect = async (id) => {
+    if (isConnecting.current) return;
+
+    isConnecting.current = true;
+
+    try {
+      const connector = connectors.find((c) => c.id === id);
+
+      if (!connector) {
+        console.log("Connector not found:", id);
+        return;
+      }
+
+      setUiStatus("Opening wallet...");
+
+      // IMPORTANT: this only opens wallet
+      connect({ connector });
+
+      // DO NOT assume result here
+      setUiStatus("Approve in wallet and return to Telegram");
+
+    } catch (err) {
+      console.log("Connect error:", err);
+      setUiStatus("Wallet opened. Finish approval in app");
+    } finally {
+      isConnecting.current = false;
     }
-  }, [isConnected, address]);
-
-  // -----------------------------
-  // CONNECT HANDLER (SAFE)
-  // -----------------------------
- const handleConnect = async (id) => {
-  try {
-    const connector = connectors.find((c) => c.id === id);
-    if (!connector) return;
-
-    setStatus("Opening wallet...");
-
-    await connectAsync({ connector });
-
-    setStatus("Approve in wallet app");
-
-  } catch (err) {
-    console.log("Wallet error:", err);
-
-    setStatus("If wallet opened, approve manually and return");
-  }
-};
+  };
 
   return (
     <div className="min-h-screen bg-[#020617] text-white pb-24">
@@ -68,12 +81,11 @@ export default function WalletPage() {
         <button onClick={() => navigate(-1)}>
           <ArrowLeft />
         </button>
-
-        <h1 className="font-bold text-lg">Wallet</h1>
+        <h1 className="font-bold">Wallet</h1>
         <div />
       </div>
 
-      {/* STATUS CARD */}
+      {/* STATUS */}
       <div className="px-4">
         <div className="bg-slate-900 border border-slate-700 rounded-xl p-4">
 
@@ -83,9 +95,7 @@ export default function WalletPage() {
             </div>
 
             <div>
-              <div className="text-sm text-gray-400">
-                Connected Wallet
-              </div>
+              <div className="text-gray-400 text-sm">Wallet Status</div>
 
               <div className="font-bold">
                 {isConnected
@@ -96,7 +106,7 @@ export default function WalletPage() {
           </div>
 
           <div className="text-yellow-400 text-xs mt-2">
-            {status}
+            {uiStatus}
           </div>
 
           {isConnected && (
@@ -110,45 +120,28 @@ export default function WalletPage() {
         </div>
       </div>
 
-      {/* WALLET BUTTONS */}
-      <div className="grid grid gap-3 px-4 mt-5">
+      {/* WALLETS */}
+      <div className="grid grid-cols-3 gap-3 px-4 mt-5">
 
-        {/* METAMASK */}
-        {/* <button
-          onClick={() => handleConnect("metaMaskSDK")}
-          className="bg-slate-900 p-4 rounded-xl border border-slate-800 flex flex-col items-center"
-        >
-          <img src={MetaMaskIcon} className="w-12 mb-2" />
+        <button onClick={() => handleConnect("metaMaskSDK")}
+          className="bg-slate-900 p-4 rounded-xl border border-slate-800">
+          <img src={MetaMaskIcon} className="w-12 mx-auto mb-2" />
           MetaMask
-        </button> */}
+        </button>
 
-        {/* WALLETCONNECT */}
-        <button
-          onClick={() => handleConnect("walletConnect")}
-          className="bg-slate-900 p-4 rounded-xl border border-slate-800 flex flex-col items-center"
-        >
-          <img src={WalletConnectIcon} className="w-12 mb-2" />
+        <button onClick={() => handleConnect("walletConnect")}
+          className="bg-slate-900 p-4 rounded-xl border border-slate-800">
+          <img src={WalletConnectIcon} className="w-12 mx-auto mb-2" />
           WalletConnect
         </button>
 
-        {/* COINBASE */}
-        {/* <button
-          onClick={() => handleConnect("coinbaseWalletSDK")}
-          className="bg-slate-900 p-4 rounded-xl border border-slate-800 flex flex-col items-center"
-        >
-          <img src={CoinbaseIcon} className="w-12 mb-2" />
-          Coinbasse
-        </button> */}
+        <button onClick={() => handleConnect("coinbaseWalletSDK")}
+          className="bg-slate-900 p-4 rounded-xl border border-slate-800">
+          <img src={CoinbaseIcon} className="w-12 mx-auto mb-2" />
+          Coinbase
+        </button>
 
       </div>
-
-      {/* HELP TEXT */}
-      {!isConnected && (
-        <div className="px-4 mt-4 text-sm text-yellow-400">
-          If wallet opens, approve it and return manually to Telegram.
-        </div>
-      )}
-
     </div>
   );
 }
