@@ -7,20 +7,27 @@ export default function Wallet() {
   const { disconnect } = useDisconnect();
 
   const [status, setStatus] = useState("Not Connected");
-  const connectingRef = useRef(false);
+  const lock = useRef(false);
 
-  // 🔥 CRITICAL FIX: FORCE SESSION RECHECK AFTER RETURN
+  // 🔥 CRITICAL FIX 1: FORCE SESSION RECHECK AFTER RETURN
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (document.visibilityState === "visible") {
-        window.dispatchEvent(new Event("focus"));
-      }
-    }, 1200);
+    const check = () => {
+      window.dispatchEvent(new Event("focus"));
+    };
 
-    return () => clearInterval(interval);
+    const interval = setInterval(check, 1200);
+
+    window.addEventListener("visibilitychange", check);
+    window.addEventListener("focus", check);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("visibilitychange", check);
+      window.removeEventListener("focus", check);
+    };
   }, []);
 
-  // 🔥 UPDATE UI FROM REAL STATE
+  // 🔥 CRITICAL FIX 2: REAL CONNECTION STATE
   useEffect(() => {
     if (isConnected && address) {
       setStatus("Connected ✅");
@@ -29,19 +36,10 @@ export default function Wallet() {
     }
   }, [isConnected, address]);
 
-  // 🔥 CLEAN WALLET SESSIONS (PREVENT STUCK STATE)
-  useEffect(() => {
-    Object.keys(localStorage).forEach((key) => {
-      if (key.includes("walletconnect") || key.includes("wc@")) {
-        localStorage.removeItem(key);
-      }
-    });
-  }, []);
-
-  // 🔥 CONNECT HANDLER
+  // 🔥 CONNECT SAFE
   const handleConnect = (id) => {
-    if (connectingRef.current) return;
-    connectingRef.current = true;
+    if (lock.current) return;
+    lock.current = true;
 
     const connector = connectors.find((c) => c.id === id);
     if (!connector) return;
@@ -50,61 +48,55 @@ export default function Wallet() {
 
     connect({ connector });
 
-    setStatus("Approve in wallet and return to app");
+    // IMPORTANT: DO NOT WAIT OR EXPECT RETURN EVENT
+    setStatus("Approve in wallet and return manually");
 
-    connectingRef.current = false;
+    setTimeout(() => {
+      lock.current = false;
+    }, 3000);
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-4">
 
-      {/* STATUS CARD */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-6">
-
-        <h2 className="text-yellow-400 font-bold text-lg">
-          Wallet Status
-        </h2>
+      <div className="bg-slate-900 p-4 rounded-xl mb-4">
+        <h2 className="text-yellow-400 font-bold">Wallet Status</h2>
 
         <p className="text-gray-300">
-          {address
-            ? `${address.slice(0, 6)}...${address.slice(-4)}`
-            : "Not Connected"}
+          {address ? address : "Not Connected"}
         </p>
 
-        <p className="text-cyan-400 text-sm mt-2">
-          {status}
-        </p>
+        <p className="text-cyan-400">{status}</p>
 
         {isConnected && (
           <button
+            className="mt-3 bg-red-500 px-4 py-2 rounded"
             onClick={() => disconnect()}
-            className="mt-3 bg-red-500 px-4 py-2 rounded-lg"
           >
             Disconnect
           </button>
         )}
       </div>
 
-      {/* WALLET BUTTONS */}
       <div className="grid grid-cols-3 gap-3">
 
         <button
+          className="bg-slate-800 p-3 rounded"
           onClick={() => handleConnect("metaMaskSDK")}
-          className="bg-slate-900 border border-slate-700 rounded-xl p-4 hover:border-orange-500"
         >
           MetaMask
         </button>
 
         <button
+          className="bg-slate-800 p-3 rounded"
           onClick={() => handleConnect("walletConnect")}
-          className="bg-slate-900 border border-slate-700 rounded-xl p-4 hover:border-purple-500"
         >
           WalletConnect
         </button>
 
         <button
+          className="bg-slate-800 p-3 rounded"
           onClick={() => handleConnect("coinbaseWalletSDK")}
-          className="bg-slate-900 border border-slate-700 rounded-xl p-4 hover:border-blue-500"
         >
           Coinbase
         </button>
