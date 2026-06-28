@@ -26,7 +26,14 @@ createAppKit({
   metadata,
   networks: [polygon],
   defaultNetwork: polygon,
+
   features: {
-    analytics: false
-  }
+    analytics: false,
+    email: false,
+    socials: false
+  },
+
+  // ⭐ ADD THIS
+  enableWalletConnect: true,
+  enableInjected: true
 });

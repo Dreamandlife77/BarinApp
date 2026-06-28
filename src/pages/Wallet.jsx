@@ -9,9 +9,18 @@ export default function Wallet() {
     const { disconnect } = useDisconnect();
 
     useEffect(() => {
-        console.log("Connected:", isConnected);
-        console.log("Address:", address);
-    }, [isConnected, address]);
+
+    const interval = setInterval(() => {
+
+        if (address && !isConnected) {
+            console.log("Forcing reconnect check...");
+        }
+
+    }, 1000);
+
+    return () => clearInterval(interval);
+
+}, [address, isConnected]);
 
     return (
         <div style={{ padding: "10px" }}>
@@ -57,7 +66,7 @@ export default function Wallet() {
                             cursor: "pointer"
                         }}
                     >
-                        Connect Wallet
+                        Connectd Wallet
                     </button>
 
                 )
