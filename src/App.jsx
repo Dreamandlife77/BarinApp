@@ -13,20 +13,55 @@ import Login from "./auth/Login";
 import EducationDetail from "./pages/EducationDetail";
 import Home from "./pages/Home.jsx"
 import WalletPage from "./pages/Wallet";
-import { useEffect, useState } from "react";
-//
+import { useEffect, useRef, useCallback } from "react";
+import { useAccount, useReconnect } from "wagmi";
+
 function App() {
-useEffect(() => {
 
-    const onFocus = () => {
-        window.location.reload();
-    };
+    const { isConnected } = useAccount();
+    const { reconnect } = useReconnect();
+    const timersRef = useRef([]);
 
-    window.addEventListener("focus", onFocus);
+    // Retry reconnect with delays to handle WebSocket timing
+    const attemptReconnect = useCallback(() => {
+        if (isConnected) return;
 
-    return () => window.removeEventListener("focus", onFocus);
+        // Clear any pending retries
+        timersRef.current.forEach(clearTimeout);
+        timersRef.current = [];
 
-}, []);
+        // Try reconnect at staggered intervals: now, 500ms, 1.5s, 3s
+        const delays = [0, 500, 1500, 3000];
+        delays.forEach((delay) => {
+            const timer = setTimeout(() => {
+                reconnect();
+            }, delay);
+            timersRef.current.push(timer);
+        });
+    }, [isConnected, reconnect]);
+
+    // Listen for visibilitychange + focus + Telegram resume
+    useEffect(() => {
+        const handleVisibility = () => {
+            if (document.visibilityState === "visible") {
+                attemptReconnect();
+            }
+        };
+
+        const handleFocus = () => {
+            attemptReconnect();
+        };
+
+        document.addEventListener("visibilitychange", handleVisibility);
+        window.addEventListener("focus", handleFocus);
+
+        return () => {
+            document.removeEventListener("visibilitychange", handleVisibility);
+            window.removeEventListener("focus", handleFocus);
+            timersRef.current.forEach(clearTimeout);
+        };
+    }, [attemptReconnect]);
+
   return (
     <BrowserRouter>
       <Routes>

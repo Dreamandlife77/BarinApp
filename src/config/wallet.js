@@ -19,7 +19,6 @@ export const wagmiAdapter = new WagmiAdapter({
   networks: [polygon]
 });
 
-// Create AppKit ONCE
 createAppKit({
   adapters: [wagmiAdapter],
   projectId,
@@ -28,12 +27,15 @@ createAppKit({
   defaultNetwork: polygon,
 
   features: {
-    analytics: false,
-    email: false,
-    socials: false
+    analytics: false
   },
 
-  // ⭐ ADD THIS
+  // 🔥 ADD THIS (CRITICAL FOR MOBILE DEEP LINK RECOVERY)
   enableWalletConnect: true,
-  enableInjected: true
+
+  // 🔥 IMPORTANT: force session persistence
+  enableInjected: true,
+
+  // 🔥 ADD THIS (VERY IMPORTANT)
+  storage: "localStorage"
 });
