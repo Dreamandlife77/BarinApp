@@ -10,44 +10,34 @@ const projectId = "beb23aec824ef375771f0418bffcfd14";
 
 export const wagmiConfig = createConfig({
   chains: [polygon],
-  
   connectors: [
     metaMask({
       dappMetadata: {
         name: "BARIN Game",
       },
     }),
-    
     walletConnect({
       projectId,
       showQrModal: true,
-      metadata: {
-        name: "BARIN Game",
-        description: "BARIN Game Mini App",
-        url: "https://barin-app.vercel.app/", // Replace with your actual URL
-        icons: ["https://barin-app.vercel.app/icon.png"], // Replace with your icon
-      },
       qrModalOptions: {
         themeMode: 'dark',
         themeVariables: {
           '--wcm-z-index': '9999',
-          '--wcm-background-color': '#0f172a',
-          '--wcm-accent-color': '#8b5cf6',
-        }
-      }
+        },
+      },
+      metadata: {
+        name: "BARIN Game",
+        description: "BARIN Game Mini App",
+        url: "https://barin-app.vercel.app", // Your actual URL
+        icons: ["https://barin-app.vercel.app/icon.png"], // Optional
+      },
     }),
-    
     coinbaseWallet({
       appName: "BARIN Game",
-      appLogoUrl: "https://barin-app.vercel.app/icon.png", // Replace with your icon
+      appLogoUrl: "https://barin-app.vercel.app/icon.png", // Optional
     }),
   ],
-
   transports: {
     [polygon.id]: http(),
   },
-  
-  // Add this to improve reconnection
-  syncConnectedChain: true,
-  multiInjectedProviderDiscovery: false,
 });
