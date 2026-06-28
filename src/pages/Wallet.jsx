@@ -53,6 +53,9 @@ export default function Wallet() {
           address,
         });
 
+        alert("CALLING BACKEND");
+        console.log("CALLING BACKEND");
+
         console.log("✅ Backend response:", res.data);
 
         localStorage.setItem("token", res.data.token);
@@ -121,7 +124,7 @@ export default function Wallet() {
           className="bg-slate-800 p-3 rounded"
           onClick={() => handleConnect("walletConnect")}
         >
-          WalletConnecst
+          WalletConnecstdd
         </button>
 
         <button
