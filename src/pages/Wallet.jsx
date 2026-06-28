@@ -8,85 +8,89 @@ export default function Wallet() {
   const { disconnect } = useDisconnect();
 
   const [status, setStatus] = useState("Not Connected");
-  const lock = useRef(false);
 
-  // 🔥 FORCE RECONNECT ON RETURN (TELEGRAM FIX)
-  useEffect(() => {
-    const forceRefresh = () => {
-      window.dispatchEvent(new Event("focus"));
-      window.dispatchEvent(new Event("visibilitychange"));
-    };
+  // prevents duplicate backend calls
+  const sentRef = useRef(false);
 
-    forceRefresh();
-
-    const interval = setInterval(forceRefresh, 1500);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // 🔥 SEND TO BACKEND ONLY WHEN ADDRESS EXISTS
-  useEffect(() => {
-    const login = async () => {
-      if (!isConnected || !address) return;
-
-      try {
-        setStatus("Logging in...");
-
-        const res = await API.post("/auth/wallet-login", {
-          address,
-        });
-
-        localStorage.setItem("token", res.data.token);
-
-        setStatus("Connected ✅");
-
-        console.log("Backend login success:", res.data);
-
-      } catch (err) {
-        console.log("Backend error:", err);
-        setStatus("Login failed");
-      }
-    };
-
-    login();
-  }, [isConnected, address]);
-
-  // 🔥 CONNECT WALLET
+  // -----------------------------
+  // CONNECT WALLET
+  // -----------------------------
   const handleConnect = (id) => {
-    if (lock.current) return;
-    lock.current = true;
-
     const connector = connectors.find((c) => c.id === id);
-
     if (!connector) return;
 
     setStatus("Opening wallet...");
 
     connect({ connector });
 
-    setStatus("Approve in wallet & return to Telegram");
-
-    setTimeout(() => {
-      lock.current = false;
-    }, 3000);
+    setStatus("Approve wallet and return...");
   };
 
-  // 🔥 DISCONNECT
+  // -----------------------------
+  // MAIN FIX: RELIABLE BACKEND SYNC
+  // -----------------------------
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      console.log("CHECK STATE:", {
+        address,
+        isConnected,
+      });
+
+      // wait until wallet is truly ready
+      if (!address || !isConnected) return;
+
+      // prevent duplicate calls
+      if (sentRef.current) return;
+
+      sentRef.current = true;
+
+      try {
+        setStatus("Logging into backend...");
+
+        console.log("🚀 Sending address to backend:", address);
+
+        const res = await API.post("/auth/wallet-login", {
+          address,
+        });
+
+        console.log("✅ Backend response:", res.data);
+
+        localStorage.setItem("token", res.data.token);
+
+        setStatus("Connected ✅");
+      } catch (err) {
+        console.log("❌ Backend error:", err);
+        setStatus("Backend failed");
+      }
+    }, 1000); // polling fixes Telegram return issue
+
+    return () => clearInterval(interval);
+  }, [address, isConnected]);
+
+  // -----------------------------
+  // DISCONNECT
+  // -----------------------------
   const handleDisconnect = () => {
     disconnect();
     localStorage.removeItem("token");
-    setStatus("Disconnected");
+    sentRef.current = false;
+    setStatus("Not Connected");
   };
 
+  // -----------------------------
+  // UI
+  // -----------------------------
   return (
     <div className="min-h-screen bg-slate-950 text-white p-4">
 
-      {/* STATUS */}
+      {/* STATUS BOX */}
       <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-        <h2 className="text-yellow-400 font-bold">Wallet Status</h2>
+        <h2 className="text-yellow-400 font-bold">
+          Wallet Status
+        </h2>
 
-        <p className="break-all text-gray-300 mt-2">
-          {address || "No Wallet"}
+        <p className="text-gray-300 break-all mt-2">
+          {address || "No wallet connected"}
         </p>
 
         <p className="text-cyan-400 mt-2">
@@ -117,7 +121,7 @@ export default function Wallet() {
           className="bg-slate-800 p-3 rounded"
           onClick={() => handleConnect("walletConnect")}
         >
-          WalletConnect
+          WalletConnecst
         </button>
 
         <button
@@ -128,7 +132,6 @@ export default function Wallet() {
         </button>
 
       </div>
-
     </div>
   );
 }
