@@ -6,13 +6,14 @@ import "./index.css";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-import { wagmiConfig } from "./wallet/wagmiConfig";
+import { wagmiAdapter } from "@reown/appkit-adapter-wagmi";
+import { appKit } from "./wallet/appkit";
 
 const queryClient = new QueryClient();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <WagmiProvider config={wagmiConfig}>
+    <WagmiProvider config={wagmiAdapter.wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <App />
       </QueryClientProvider>

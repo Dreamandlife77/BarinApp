@@ -1,158 +1,71 @@
-import { useEffect, useRef, useState } from "react";
-import { useAccount, useConnect, useDisconnect } from "wagmi";
-import API from "../config/api";
+import { useEffect, useState } from "react";
+import { appKit } from "../wallet/appkit";
 
 export default function Wallet() {
-  const { address, isConnected } = useAccount();
-  const { connectors, connect } = useConnect();
+  const [status, setStatus] = useState("Idle");
 
-  useEffect(() => {
-    alert(
-        connectors.map(c => c.id).join("\n")
-    );
-}, []);
-  const { disconnect } = useDisconnect();
+  // -------------------------
+  // STEP 1: OPEN WALLET
+  // -------------------------
+  const openWallet = async () => {
+    alert("STEP 1: Opening AppKit");
 
-  const [status, setStatus] = useState("Not Connected");
+    await appKit.open();
 
-  // prevents duplicate backend calls
-  const sentRef = useRef(false);
-
-  // -----------------------------
-  // CONNECT WALLET
-  // -----------------------------
-  const handleConnect = (id) => {
-    const connector = connectors.find((c) => c.id === id);
-    if (!connector) return;
-
-    setStatus("Opening wallet...");
-
-    connect(
-  { connector },
-  {
-    onSuccess(data) {
-      alert("SUCCESS");
-      console.log(data);
-    },
-    onError(error) {
-      alert(error.message);
-      console.log(error);
-    },
-  }
-);
-
-    setStatus("Approve wallet and return...");
+    alert("STEP 2: Wallet modal opened");
   };
 
-  // -----------------------------
-  // MAIN FIX: RELIABLE BACKEND SYNC
-  // -----------------------------
+  // -------------------------
+  // STEP 2: LISTEN EVENTS
+  // -------------------------
   useEffect(() => {
-    const interval = setInterval(async () => {
-      console.log("CHECK STATE:", {
-        address,
-        isConnected,
-      });
+    alert("Wallet Page Loaded");
 
-      // wait until wallet is truly ready
-      if (!address || !isConnected) return;
+    // 🔥 WALLET SELECTED
+    appKit.subscribe("modal_open", () => {
+      alert("EVENT: modal opened");
+      setStatus("Wallet modal opened");
+    });
 
-      // prevent duplicate calls
-      if (sentRef.current) return;
+    // 🔥 WALLET CONNECTED
+    appKit.subscribe("connect", (data) => {
+      alert(
+        "EVENT: wallet connected\n" +
+        JSON.stringify(data, null, 2)
+      );
 
-      sentRef.current = true;
+      setStatus("Wallet connected ✅");
+    });
 
-      try {
-        setStatus("Logging into backend...");
+    // 🔥 DISCONNECT
+    appKit.subscribe("disconnect", () => {
+      alert("EVENT: wallet disconnected");
+      setStatus("Disconnected");
+    });
 
-        console.log("🚀 Sending address to backend:", address);
+  }, []);
 
-        const res = await API.post("/auth/wallet-login", {
-          address,
-        });
-
-        alert("CALLING BACKEND");
-        console.log("CALLING BACKEND");
-
-        console.log("✅ Backend response:", res.data);
-
-        localStorage.setItem("token", res.data.token);
-
-        setStatus("Connected ✅");
-      } catch (err) {
-        console.log("❌ Backend error:", err);
-        setStatus("Backend failed");
-      }
-    }, 1000); // polling fixes Telegram return issue
-
-    return () => clearInterval(interval);
-  }, [address, isConnected]);
-
-  // -----------------------------
-  // DISCONNECT
-  // -----------------------------
-  const handleDisconnect = () => {
-    disconnect();
-    localStorage.removeItem("token");
-    sentRef.current = false;
-    setStatus("Not Connected");
-  };
-
-  // -----------------------------
+  // -------------------------
   // UI
-  // -----------------------------
+  // -------------------------
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-4">
+    <div className="min-h-screen bg-black text-white p-4">
 
-      {/* STATUS BOX */}
-      <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-        <h2 className="text-yellow-400 font-bold">
-          Wallet Status
-        </h2>
+      <h1 className="text-xl font-bold">
+        AppKit Wallet Debug
+      </h1>
 
-        <p className="text-gray-300 break-all mt-2">
-          {address || "No wallet connected"}
-        </p>
+      <p className="mt-2 text-cyan-400">
+        Status: {status}
+      </p>
 
-        <p className="text-cyan-400 mt-2">
-          {status}
-        </p>
+      <button
+        onClick={openWallet}
+        className="mt-6 bg-yellow-500 text-black px-4 py-2 rounded"
+      >
+        Connect Wallet
+      </button>
 
-        {isConnected && (
-          <button
-            onClick={handleDisconnect}
-            className="mt-3 bg-red-500 px-4 py-2 rounded"
-          >
-            Disconnect
-          </button>
-        )}
-      </div>
-
-      {/* BUTTONS */}
-      <div className="grid grid-cols-3 gap-3 mt-4">
-
-        <button
-          className="bg-slate-800 p-3 rounded"
-          onClick={() => handleConnect("metaMaskSDK")}
-        >
-          MetaMask
-        </button>
-
-        <button
-          className="bg-slate-800 p-3 rounded"
-          onClick={() => handleConnect("walletConnect")}
-        >
-          WalletConnectt
-        </button>
-
-        <button
-          className="bg-slate-800 p-3 rounded"
-          onClick={() => handleConnect("coinbaseWalletSDK")}
-        >
-          Coinbase
-        </button>
-
-      </div>
     </div>
   );
 }
