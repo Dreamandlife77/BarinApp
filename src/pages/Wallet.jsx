@@ -1,6 +1,6 @@
 import { useAppKit } from "@reown/appkit/react";
 import { useAccount, useDisconnect } from "wagmi";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function Wallet() {
 
@@ -8,34 +8,55 @@ export default function Wallet() {
     const { address, isConnected } = useAccount();
     const { disconnect } = useDisconnect();
 
+    const [checking, setChecking] = useState(false);
+
+    // 🔥 FORCE CHECK AFTER RETURN (critical fix)
     useEffect(() => {
-        console.log("Wallet state:", { isConnected, address });
-    }, [isConnected, address]);
+
+        if (!isConnected && checking) {
+
+            const timer = setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+
+            return () => clearTimeout(timer);
+        }
+
+    }, [isConnected, checking]);
+
+    const connectWallet = async () => {
+
+        setChecking(true);
+
+        open({ view: "Connect" });
+
+        // fallback safety check
+        setTimeout(() => {
+            if (!isConnected) {
+                console.log("Retrying connection...");
+            }
+        }, 5000);
+
+    };
 
     return (
         <div>
 
             {!isConnected ? (
 
-                <button
-                    onClick={() => open({ view: "Connect" })}
-                >
-                    Connect Wallet
+                <button onClick={connectWallet}>
+                    Connect Walletss
                 </button>
 
             ) : (
 
                 <div>
-
                     <p>Connected</p>
-                    <p style={{ fontSize: 12 }}>{address}</p>
+                    <p>{address}</p>
 
-                    <button
-                        onClick={() => disconnect()}
-                    >
+                    <button onClick={() => disconnect()}>
                         Disconnect
                     </button>
-
                 </div>
 
             )}
