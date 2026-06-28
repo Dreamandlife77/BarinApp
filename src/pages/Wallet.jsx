@@ -52,7 +52,7 @@ export default function WalletPage() {
       <p>
         {isConnected
           ? `Connected: ${address}`
-          : "Not Conndddected"}
+          : "Not Conndddecdted"}
       </p>
 
       <button onClick={() => handleConnect("metaMaskSDK")}>
