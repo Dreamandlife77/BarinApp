@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { useQueryClient } from "@tanstack/react-query";
+
+const queryClient = useQueryClient();
 
 export default function Wallet() {
   const { address, isConnected } = useAccount();
@@ -26,7 +29,22 @@ export default function Wallet() {
       window.removeEventListener("focus", check);
     };
   }, []);
+useEffect(() => {
+  const onReturn = () => {
+    console.log("🔄 User returned from wallet");
 
+    // FORCE wagmi refresh
+    queryClient.invalidateQueries();
+  };
+
+  window.addEventListener("focus", onReturn);
+  window.addEventListener("visibilitychange", onReturn);
+
+  return () => {
+    window.removeEventListener("focus", onReturn);
+    window.removeEventListener("visibilitychange", onReturn);
+  };
+}, [queryClient]);
   // 🔥 CRITICAL FIX 2: REAL CONNECTION STATE
   useEffect(() => {
     if (isConnected && address) {
@@ -91,7 +109,7 @@ export default function Wallet() {
           className="bg-slate-800 p-3 rounded"
           onClick={() => handleConnect("walletConnect")}
         >
-          WalletConnect
+          WalletConnddect
         </button>
 
         <button
