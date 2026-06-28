@@ -1,67 +1,59 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 
-export default function Wallet() {
-  const { address, isConnected, status } = useAccount();
+export default function WalletPage() {
+  const { address, isConnected } = useAccount();
   const { connectors, connect } = useConnect();
   const { disconnect } = useDisconnect();
 
-  const [ui, setUi] = useState("Not Connected");
+  const connectingRef = useRef(false);
 
-  // -------------------------
-  // FORCE RECHECK SESSION (KEY FIX)
-  // -------------------------
+  // 🔥 FORCE RECONNECT DETECTION (THIS FIXES YOUR STUCK SCREEN)
   useEffect(() => {
     const interval = setInterval(() => {
-      window.dispatchEvent(new Event("focus"));
-    }, 1500);
+      if (document.visibilityState === "visible") {
+        window.dispatchEvent(new Event("focus"));
+      }
+    }, 1000);
 
     return () => clearInterval(interval);
   }, []);
 
-  // -------------------------
-  // UPDATE UI FROM REAL STATE
-  // -------------------------
+  // 🔥 AUTO UPDATE UI
   useEffect(() => {
-    if (isConnected && address) {
-      setUi("Connected ✅");
-    } else {
-      setUi("Not Connected");
+    console.log("Wallet state:", { address, isConnected });
+  }, [address, isConnected]);
+
+  const handleConnect = async (id) => {
+    if (connectingRef.current) return;
+    connectingRef.current = true;
+
+    try {
+      const connector = connectors.find((c) => c.id === id);
+      if (!connector) return;
+
+      console.log("Connecting:", connector.name);
+
+      connect({ connector });
+
+      // IMPORTANT: DO NOT WAIT FOR RETURN
+      console.log("Wallet opened. wait for approval...");
+    } catch (e) {
+      console.log(e);
+    } finally {
+      connectingRef.current = false;
     }
-  }, [isConnected, address]);
-
-  // -------------------------
-  // CONNECT WALLET
-  // -------------------------
-  const handleConnect = (id) => {
-    const connector = connectors.find((c) => c.id === id);
-    if (!connector) return;
-
-    setUi("Opening wallet...");
-
-    connect({ connector });
-
-    setUi("Approve in wallet and return here");
   };
 
   return (
-    <div style={{ padding: 20, color: "white" }}>
-
-      <h2>Wallet Status</h2>
+    <div className="bg-color: red">
+      <h2>Wallet</h2>
 
       <p>
-        {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "None"}
+        {isConnected
+          ? `Connected: ${address}`
+          : "Not Connected"}
       </p>
-
-      <p style={{ color: "orange" }}>{ui}</p>
-
-      {isConnected && (
-        <button onClick={() => disconnect()}>
-          Disconnect
-        </button>
-      )}
-
-      <hr />
 
       <button onClick={() => handleConnect("metaMaskSDK")}>
         MetaMask
@@ -75,6 +67,9 @@ export default function Wallet() {
         Coinbase
       </button>
 
+      <button onClick={() => disconnect()}>
+        Disconnect
+      </button>
     </div>
   );
 }
