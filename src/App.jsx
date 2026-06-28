@@ -1,4 +1,4 @@
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Splash from "./pages/Splash";
 import Onboarding from "./pages/Onboarding";
@@ -18,7 +18,7 @@ import { useEffect, useState } from "react";
 function App() {
 
   return (
-    <HashRouter>
+    <BrowserRouter>
       <Routes>
         <Route path="/" element={<Splash />} />
         <Route path="/home" element={<Home />} />
@@ -36,7 +36,7 @@ function App() {
         <Route path="/wallet" element={<WalletPage />}
 />
       </Routes>
-    </HashRouter>
+    </BrowserRouter>
   );
 }
 
