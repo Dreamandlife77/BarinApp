@@ -20,26 +20,15 @@ export const wagmiAdapter = new WagmiAdapter({
 });
 
 createAppKit({
-  adapters: [wagmiAdapter],
-  projectId,
-  metadata,
-  networks: [polygon],
-  defaultNetwork: polygon,
+    adapters: [wagmiAdapter],
+    projectId,
+    metadata,
+    networks: [polygon],
+    defaultNetwork: polygon,
 
-  features: {
-    analytics: false,
-    email: false,
-    socials: false
-  },
-
-  // 🔥 CRITICAL FIX
-  enableWalletConnect: true,
-  enableInjected: true,
-
-  // 🔥 FORCE SAFE STORAGE
-  storage: "localStorage",
-
-  // 🔥 DISABLE AUTO REDIRECT HANDLING
-  // (prevents wc:// crash loop in Telegram)
-  debug: false
+    features: {
+        analytics: false,
+        email: false,
+        socials: false
+    }
 });

@@ -23,6 +23,18 @@ function App() {
 
     useEffect(() => {
 
+    console.log("🔥 HARD RESET WalletConnect state");
+
+    localStorage.removeItem("walletconnect");
+    localStorage.removeItem("wc@2:client");
+    localStorage.removeItem("WALLETCONNECT_DEEPLINK_CHOICE");
+
+    sessionStorage.clear();
+
+}, []);
+
+    useEffect(() => {
+
         const timer = setInterval(() => {
 
             // 🔥 force wagmi state refresh
