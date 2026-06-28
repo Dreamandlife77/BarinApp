@@ -11,40 +11,78 @@ import Mining from "./pages/Mining";
 import Register from "./auth/Register";
 import Login from "./auth/Login";
 import EducationDetail from "./pages/EducationDetail";
-import Home from "./pages/Home.jsx";
+import Home from "./pages/Home.jsx"
 import WalletPage from "./pages/Wallet";
-
-import { useEffect } from "react";
+import { useEffect, useRef, useCallback } from "react";
+import { useAccount, useReconnect } from "wagmi";
 
 function App() {
 
-    // ❌ DO NOT clear wallet storage (BREAKS WALLET)
+    const { isConnected } = useAccount();
+    const { reconnect } = useReconnect();
+    const timersRef = useRef([]);
+
+    // Retry reconnect with delays to handle WebSocket timing
+    const attemptReconnect = useCallback(() => {
+        if (isConnected) return;
+
+        // Clear any pending retries
+        timersRef.current.forEach(clearTimeout);
+        timersRef.current = [];
+
+        // Try reconnect at staggered intervals: now, 500ms, 1.5s, 3s
+        const delays = [0, 500, 1500, 3000];
+        delays.forEach((delay) => {
+            const timer = setTimeout(() => {
+                reconnect();
+            }, delay);
+            timersRef.current.push(timer);
+        });
+    }, [isConnected, reconnect]);
+
+    // Listen for visibilitychange + focus + Telegram resume
     useEffect(() => {
-        console.log("App loaded");
-    }, []);
+        const handleVisibility = () => {
+            if (document.visibilityState === "visible") {
+                attemptReconnect();
+            }
+        };
 
-    return (
-        <BrowserRouter>
-            <Routes>
+        const handleFocus = () => {
+            attemptReconnect();
+        };
 
-                <Route path="/" element={<Splash />} />
-                <Route path="/home" element={<Home />} />
-                <Route path="/home/:id" element={<Home />} />
-                <Route path="/tutorial" element={<Onboarding />} />
-                <Route path="/experts" element={<Experts />} />
-                <Route path="/experts/:id" element={<ExpertsDetail />} />
-                <Route path="/missions" element={<Missions />} />
-                <Route path="/leaderboard" element={<Leaderboard />} />
-                <Route path="/minerals" element={<MineralCollection />} />
-                <Route path="/mining" element={<Mining />} />
-                <Route path="/education/:id" element={<EducationDetail />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/wallet" element={<WalletPage />} />
+        document.addEventListener("visibilitychange", handleVisibility);
+        window.addEventListener("focus", handleFocus);
 
-            </Routes>
-        </BrowserRouter>
-    );
+        return () => {
+            document.removeEventListener("visibilitychange", handleVisibility);
+            window.removeEventListener("focus", handleFocus);
+            timersRef.current.forEach(clearTimeout);
+        };
+    }, [attemptReconnect]);
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Splash />} />
+        <Route path="/home" element={<Home />} />
+        <Route path="/home/:id" element={<Home />} />
+        <Route path="/tutorial" element={<Onboarding />} />
+        <Route path="/experts"  element={<Experts />} />
+        <Route path="/experts/:id" element={<ExpertsDetail />} />
+        <Route path="/missions" element={<Missions />} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
+        <Route path="/minerals" element={<MineralCollection />} />
+        <Route path="/mining"  element={<Mining />} />
+        <Route path="/education/:id"  element={<EducationDetail />} />
+        <Route path="/register"  element={<Register />} />
+        <Route path="/login"  element={<Login />} />
+        <Route path="/wallet" element={<WalletPage />}
+/>
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
 export default App;

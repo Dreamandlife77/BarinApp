@@ -27,17 +27,15 @@ createAppKit({
   defaultNetwork: polygon,
 
   features: {
-    analytics: false,
-    email: false,
-    socials: false
+    analytics: false
   },
 
+  // 🔥 ADD THIS (CRITICAL FOR MOBILE DEEP LINK RECOVERY)
   enableWalletConnect: true,
+
+  // 🔥 IMPORTANT: force session persistence
   enableInjected: true,
 
-  // 🔥 IMPORTANT
-  enableCoinbase: false,
-  enableEIP6963: true,
-
+  // 🔥 ADD THIS (VERY IMPORTANT)
   storage: "localStorage"
 });
