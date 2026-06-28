@@ -2,10 +2,9 @@ import { createAppKit } from "@reown/appkit/react";
 import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import { polygon } from "@reown/appkit/networks";
 
-// 🔥 PROJECT ID
 const projectId = "beb23aec824ef375771f0418bffcfd14";
 
-// 🔥 CREATE WAGMI ADAPTER (IMPORTANT FIX)
+// 🔥 CORRECT ADAPTER SETUP
 const wagmiAdapter = new WagmiAdapter({
   projectId,
   networks: [polygon],

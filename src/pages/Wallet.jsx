@@ -1,56 +1,64 @@
-import { useEffect, useState } from "react";
-import { appKit } from "../wallet/appkit";
+import { useEffect } from "react";
+import {
+  useAppKit,
+  useAppKitAccount,
+  useDisconnect,
+} from "@reown/appkit/react";
 
 export default function Wallet() {
-  const [status, setStatus] = useState("Idle");
+  const { open } = useAppKit();
+  const { address, isConnected } = useAppKitAccount();
+  const { disconnect } = useDisconnect();
 
-  // ---------------------------
-  // OPEN WALLET
-  // ---------------------------
-  const connectWallet = async () => {
-    alert("STEP 1: Opening AppKit");
-
-    await appKit.open();
-
-    alert("STEP 2: Wallet modal opened");
-  };
-
-  // ---------------------------
-  // EVENTS
-  // ---------------------------
+  // --------------------------
+  // DEBUG: CONNECTION STATE
+  // --------------------------
   useEffect(() => {
-    alert("Wallet Page Loaded");
+    console.log("Wallet State:", {
+      address,
+      isConnected,
+    });
 
-    // WALLET CONNECTED
-    appKit.subscribe("connect", (data) => {
+    if (isConnected && address) {
       alert(
         "🔥 WALLET CONNECTED\n\n" +
-        JSON.stringify(data, null, 2)
+        address
       );
+    }
+  }, [address, isConnected]);
 
-      setStatus("Connected ✅");
-    });
+  // --------------------------
+  // CONNECT WALLET
+  // --------------------------
+  const connectWallet = () => {
+    alert("STEP 1: Opening AppKit Modal");
 
-    // WALLET DISCONNECT
-    appKit.subscribe("disconnect", () => {
-      alert("❌ Wallet Disconnected");
-      setStatus("Disconnected");
-    });
+    open(); // ✅ THIS IS CORRECT
 
-  }, []);
+    alert("STEP 2: Modal Opened");
+  };
 
-  // ---------------------------
-  // UI
-  // ---------------------------
+  // --------------------------
+  // DISCONNECT
+  // --------------------------
+  const handleDisconnect = async () => {
+    await disconnect();
+    alert("Disconnected");
+  };
+
   return (
     <div className="min-h-screen bg-black text-white p-4">
 
       <h1 className="text-xl font-bold">
-        BARIN Wallet (AppKit Test)
+        BARIN Wallet (AppKit v1.8.21)
       </h1>
 
-      <p className="mt-2 text-cyan-400">
-        Status: {status}
+      <p className="mt-3 text-cyan-400">
+        Status: {isConnected ? "Connected" : "Not Connected"}
+      </p>
+
+      <p className="mt-2 text-gray-300 break-all">
+        {address || "No wallet"}
       </p>
 
       <button
@@ -59,6 +67,15 @@ export default function Wallet() {
       >
         Connect Wallet
       </button>
+
+      {isConnected && (
+        <button
+          onClick={handleDisconnect}
+          className="mt-3 bg-red-500 px-4 py-2 rounded block"
+        >
+          Disconnect
+        </button>
+      )}
 
     </div>
   );
