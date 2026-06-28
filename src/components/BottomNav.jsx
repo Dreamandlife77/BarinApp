@@ -4,7 +4,8 @@ import {
   Trophy,
   ScrollText,
   Pickaxe,
-  Wallet
+  Wallet,
+  Crown
 } from "lucide-react";
 
 import { Link, useLocation } from "react-router-dom";
@@ -21,48 +22,35 @@ export default function BottomNav() {
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-slate-950 border-t border-slate-800 flex justify-around py-3 z-50">
 
-      <Link
-        to="/home"
-        className={activeClass("/home")}
-      >
+      <Link to="/home" className={activeClass("/home")}>
         <Home size={22} />
       </Link>
 
-      <Link
-        to="/experts"
-        className={activeClass("/experts")}
-      >
-        <User size={22} />
+      <Link to="/experts" className={activeClass("/experts")}>
+        <Crown size={22} />
       </Link>
 
-      <Link
-        to="/missions"
-        className={activeClass("/missions")}
-      >
+      <Link to="/missions" className={activeClass("/missions")}>
         <ScrollText size={22} />
       </Link>
 
-      <Link
-    to="/wallet"
-    className={activeClass("/wallet")}
-  >
-    <Wallet size={22}/>
-  </Link>
+    
 
-      <Link
-        to="/leaderboard"
-        className={activeClass("/leaderboard")}
-      >
+      <Link to="/wallet" className={activeClass("/wallet")}>
+        <Wallet size={22} />
+      </Link>
+
+      <Link to="/leaderboard" className={activeClass("/leaderboard")}>
         <Trophy size={22} />
       </Link>
 
-      <Link
-        to="/mining"
-        className={activeClass("/mining")}
-      >
+      <Link to="/mining" className={activeClass("/mining")}>
         <Pickaxe size={22} />
       </Link>
-
+  {/* ✅ NEW PROFILE TAB */}
+      <Link to="/profile" className={activeClass("/profile")}>
+        <User size={22} />
+      </Link>
     </div>
   );
 }

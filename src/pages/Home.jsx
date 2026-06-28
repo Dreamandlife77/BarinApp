@@ -13,9 +13,11 @@ import { Gift } from "lucide-react";
 import DailyRewardsModal from "../components/DailyRewardsModal";
 
 
+
 export default function Home() {
 
   const [showDailyRewards, setShowDailyRewards] = useState(false);
+  const [dailyCompleted, setDailyCompleted] = useState(false);
   const [missions, setMissions] = useState([]);
   const navigate = useNavigate();
 
@@ -48,6 +50,8 @@ const verifyDailyCode = async () => {
       xp: 20
     });
 
+
+setDailyCompleted(true);
     setShowRewardPopup(true);
 
     setTimeout(() => {
@@ -465,32 +469,47 @@ useEffect(() => {
 
     ) : (
 
-      missions.map((mission) => (
+      missions.map((mission, index) => (
+  <MissionRow
+    key={mission.id}
+    title={
+      language === "fa"
+        ? mission.title_fa
+        : mission.title_en
+    }
+    progress={`${mission.progress}/${mission.target}`}
+    
+    reward={
+  index === 0 ? (
+    dailyCompleted ? (
+      // ✅ GREEN TICK FOR DAILY LOGIN
+      <div className="w-8 h-8 flex items-center justify-center rounded-full bg-green-500 text-black font-bold shadow-lg">
+        ✔
+      </div>
+    ) : (
+      <div className="text-slate-500 text-sm">
+        
+      </div>
+    )
+  ) : (
+    // NORMAL MISSIONS
+    <div className="flex flex-col items-end gap-1">
 
-        <MissionRow
-          key={mission.id}
-          title={
-            language === "fa"
-              ? mission.title_fa
-              : mission.title_en
-          }
-          progress={`${mission.progress}/${mission.target}`}
-          reward={
-            <div className="text-right">
+      <div className="flex items-center gap-1 text-cyan-300 font-black">
+        ⚡ <span>{mission.xp}</span>
+        <span className="text-xs font-normal">XP</span>
+      </div>
 
-              <div className="text-cyan-300 font-black">
-                ⚡ {mission.xp} XP
-              </div>
+      <div className="flex items-center gap-1 text-yellow-300 font-black">
+        🪙 <span>{mission.barin}</span>
+        <span className="text-xs font-normal">BARIN</span>
+      </div>
 
-              <div className="text-yellow-300 font-black">
-                🪙 {mission.barin} BARIN
-              </div>
-
-            </div>
-          }
-        />
-
-      ))
+    </div>
+  )
+}
+  />
+))
 
     )}
 

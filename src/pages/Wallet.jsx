@@ -1,6 +1,9 @@
 import { useAppKit } from "@reown/appkit/react";
 import { useAccount, useDisconnect, useReconnect } from "wagmi";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import BottomNav from "../components/BottomNav";
 
 export default function Wallet() {
 
@@ -10,10 +13,11 @@ export default function Wallet() {
     const { reconnect } = useReconnect();
     const [refreshing, setRefreshing] = useState(false);
 
+    const navigate = useNavigate();
+
     const handleRefresh = () => {
         setRefreshing(true);
         reconnect();
-        // Give WalletConnect WebSocket time to reconnect
         setTimeout(() => reconnect(), 1000);
         setTimeout(() => {
             reconnect();
@@ -22,74 +26,80 @@ export default function Wallet() {
     };
 
     return (
-        <div style={{ padding: "10px" }}>
+        <div className="min-h-screen bg-[#020617] text-white pb-24">
 
-            {
-                isConnected ? (
+            {/* HEADER (LIKE YOUR EXPERTS PAGE) */}
+            <div className="p-4 text-center relative">
 
-                    <div>
+                <button
+                    onClick={() => navigate(-1)}
+                    className="absolute top-3 left-3 w-10 h-10 rounded-full bg-yellow-500/20 backdrop-blur flex items-center justify-center"
+                >
+                    <ArrowLeft />
+                </button>
 
-                        <p>Connected</p>
+                <h1 className="text-white text-2xl font-bold flex items-center justify-center gap-2">
+                
+                    Wallet
+                </h1>
 
-                        <p style={{ fontSize: "12px" }}>
-                            {address}
-                        </p>
+            </div>
 
-                        <button
-                            onClick={() => disconnect()}
-                            style={{
-                                marginTop: "10px",
-                                padding: "10px",
-                                background: "red",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "6px",
-                                cursor: "pointer"
-                            }}
-                        >
-                            Disconnect Wallet
-                        </button>
+            {/* MAIN CONTENT */}
+            <div className="px-4">
 
-                    </div>
+                <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-5 shadow-lg">
 
-                ) : (
+                    {isConnected ? (
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                        <div className="text-center">
 
-                        <button
-                            onClick={() => open({ view: "Connect" })}
-                            style={{
-                                padding: "10px",
-                                background: "green",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "6px",
-                                cursor: "pointer"
-                            }}
-                        >
-                            Connect Wallet3
-                        </button>
+                            <p className="text-green-400 font-semibold">
+                                Connected
+                            </p>
 
-                        <button
-                            onClick={handleRefresh}
-                            disabled={refreshing}
-                            style={{
-                                padding: "10px",
-                                background: refreshing ? "#555" : "#334155",
-                                color: "white",
-                                border: "1px solid #475569",
-                                borderRadius: "6px",
-                                cursor: refreshing ? "not-allowed" : "pointer"
-                            }}
-                        >
-                            {refreshing ? "Checking..." : "Refresh Connection"}
-                        </button>
+                            <p className="text-xs text-gray-400 break-all mt-2">
+                                {address}
+                            </p>
 
-                    </div>
+                            <button
+                                onClick={() => disconnect()}
+                                className="mt-5 w-full bg-red-500 hover:bg-red-600 transition py-3 rounded-xl font-semibold"
+                            >
+                                Disconnect Wallet
+                            </button>
 
-                )
-            }
+                        </div>
 
+                    ) : (
+
+                        <div className="flex flex-col gap-3">
+
+                            <button
+                                onClick={() => open({ view: "Connect" })}
+                                className="w-full bg-green-500 hover:bg-green-600 transition py-3 rounded-xl font-semibold"
+                            >
+                                Connect Wallet
+                            </button>
+
+                            <button
+                                onClick={handleRefresh}
+                                disabled={refreshing}
+                                className={`w-full py-3 rounded-xl border border-white/10 flex items-center justify-center gap-2
+                                ${refreshing ? "bg-gray-700 cursor-not-allowed" : "bg-[#1e293b] hover:bg-[#334155]"}`}
+                            >
+                                {refreshing ? "Checking..." : "Refresh Connection"}
+                            </button>
+
+                        </div>
+
+                    )}
+
+                </div>
+
+            </div>
+            
+            <BottomNav />
         </div>
     );
 }

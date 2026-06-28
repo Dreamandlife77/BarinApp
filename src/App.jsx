@@ -13,6 +13,7 @@ import Login from "./auth/Login";
 import EducationDetail from "./pages/EducationDetail";
 import Home from "./pages/Home.jsx"
 import WalletPage from "./pages/Wallet";
+import Profile from "./pages/Profile";
 import { useEffect, useRef, useCallback } from "react";
 import { useAccount, useReconnect } from "wagmi";
 
@@ -77,8 +78,10 @@ function App() {
         <Route path="/mining"  element={<Mining />} />
         <Route path="/education/:id"  element={<EducationDetail />} />
         <Route path="/register"  element={<Register />} />
+        <Route path="/profile" element={<Profile />} />
         <Route path="/login"  element={<Login />} />
         <Route path="/wallet" element={<WalletPage />}
+
 />
       </Routes>
     </BrowserRouter>
