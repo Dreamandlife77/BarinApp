@@ -114,13 +114,13 @@ export default function WalletPage() {
       <div className="grid grid-cols-3 gap-3 px-4 mt-5">
 
         {/* METAMASK */}
-        <button
+        {/* <button
           onClick={() => handleConnect("metaMaskSDK")}
           className="bg-slate-900 p-4 rounded-xl border border-slate-800 flex flex-col items-center"
         >
           <img src={MetaMaskIcon} className="w-12 mb-2" />
           MetaMask
-        </button>
+        </button> */}
 
         {/* WALLETCONNECT */}
         <button
@@ -132,13 +132,13 @@ export default function WalletPage() {
         </button>
 
         {/* COINBASE */}
-        <button
+        {/* <button
           onClick={() => handleConnect("coinbaseWalletSDK")}
           className="bg-slate-900 p-4 rounded-xl border border-slate-800 flex flex-col items-center"
         >
           <img src={CoinbaseIcon} className="w-12 mb-2" />
           Coinbasse
-        </button>
+        </button> */}
 
       </div>
 
