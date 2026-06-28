@@ -16,7 +16,17 @@ import WalletPage from "./pages/Wallet";
 import { useEffect, useState } from "react";
 
 function App() {
+useEffect(() => {
 
+    const onFocus = () => {
+        window.location.reload();
+    };
+
+    window.addEventListener("focus", onFocus);
+
+    return () => window.removeEventListener("focus", onFocus);
+
+}, []);
   return (
     <BrowserRouter>
       <Routes>
