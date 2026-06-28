@@ -4,7 +4,6 @@ import { polygon } from "@reown/appkit/networks";
 
 const projectId = "beb23aec824ef375771f0418bffcfd14";
 
-// 🔥 CORRECT ADAPTER SETUP
 const wagmiAdapter = new WagmiAdapter({
   projectId,
   networks: [polygon],
@@ -24,6 +23,16 @@ export const appKit = createAppKit({
 
   features: {
     analytics: false,
-    socials: false
+
+    // ❌ THIS DOES NOT REMOVE GOOGLE
+    socials: false,
+    email: false,
+
+    // ✅ IMPORTANT: DISABLE AUTH METHODS UI
+    emailShowWallets: false,
   },
+
+  // 🔥 THIS IS THE REAL FIX (IMPORTANT)
+  enableEmail: false,
+  enableSocials: false,
 });
