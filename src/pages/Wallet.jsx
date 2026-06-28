@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { walletConnect } from "wagmi/connectors";
 
 export default function Wallet() {
   const { address, isConnected, status } = useAccount();
@@ -8,13 +9,15 @@ export default function Wallet() {
 
   const [uiStatus, setUiStatus] = useState("Not Connected");
   const [isLoading, setIsLoading] = useState(false);
-  const [showRetry, setShowRetry] = useState(false);
+  const [connectionAttempt, setConnectionAttempt] = useState(0);
   const connectingRef = useRef(false);
   const timeoutRef = useRef(null);
-  const pollIntervalRef = useRef(null);
+  const intervalRef = useRef(null);
+
+  const projectId = "beb23aec824ef375771f0418bffcfd14";
 
   // -------------------------
-  // CLEAN WALLET SESSIONS
+  // CLEANUP FUNCTION
   // -------------------------
   const cleanupSessions = () => {
     try {
@@ -22,35 +25,276 @@ export default function Wallet() {
       keys.forEach(key => {
         if (key.includes("walletconnect") || key.includes("wc@") || key.includes("WALLETCONNECT")) {
           localStorage.removeItem(key);
-          console.log("Removed session:", key);
         }
       });
+      sessionStorage.clear();
     } catch (e) {
       console.log("Cleanup error:", e);
     }
   };
 
-  // Run cleanup on mount
-  useEffect(() => {
-    cleanupSessions();
-  }, []);
+  // -------------------------
+  // GET WALLETCONNECT CONNECTOR
+  // -------------------------
+  const getWCConnector = () => {
+    return connectors.find(c => c.id === "walletConnect");
+  };
 
   // -------------------------
-  // FORCE STATE SYNC AFTER RETURN
+  // POLL FOR CONNECTION STATUS
+  // -------------------------
+  const startPolling = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
+    let attempts = 0;
+    const maxAttempts = 20;
+
+    intervalRef.current = setInterval(() => {
+      attempts++;
+      console.log(`Polling connection... attempt ${attempts}`);
+
+      // Check if connected
+      if (isConnected) {
+        console.log("Connection detected!");
+        setUiStatus("Connected ✅");
+        setIsLoading(false);
+        connectingRef.current = false;
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+        return;
+      }
+
+      // Check for any WalletConnect session in localStorage
+      const hasSession = Object.keys(localStorage).some(key => 
+        key.includes("walletconnect") && localStorage.getItem(key)
+      );
+
+      if (hasSession && !isConnected) {
+        console.log("Found WalletConnect session, trying to reconnect...");
+        // Try to reconnect
+        const wcConnector = getWCConnector();
+        if (wcConnector) {
+          connect({ connector: wcConnector }).then(() => {
+            console.log("Reconnection attempt made");
+          }).catch(err => {
+            console.log("Reconnection failed:", err);
+          });
+        }
+      }
+
+      // Timeout after max attempts
+      if (attempts >= maxAttempts) {
+        console.log("Polling timeout");
+        setUiStatus("⏱️ Connection timeout. Tap retry.");
+        setIsLoading(false);
+        connectingRef.current = false;
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }, 1000);
+  };
+
+  // -------------------------
+  // CONNECT TO WALLETCONNECT
+  // -------------------------
+  const connectToWalletConnect = async () => {
+    if (connectingRef.current || isLoading) {
+      console.log("Already connecting...");
+      return;
+    }
+
+    // Cleanup
+    if (isConnected) {
+      await disconnect();
+      cleanupSessions();
+    }
+
+    // Clean any existing intervals
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    connectingRef.current = true;
+    setIsLoading(true);
+    setConnectionAttempt(prev => prev + 1);
+    setUiStatus("🔄 Opening Trust Wallet...");
+
+    try {
+      const wcConnector = getWCConnector();
+      if (!wcConnector) {
+        throw new Error("WalletConnect connector not found");
+      }
+
+      console.log("Initiating WalletConnect connection...");
+
+      // Start the connection
+      await connect({ connector: wcConnector });
+
+      // Update status
+      setUiStatus("📱 Approve in Trust Wallet");
+
+      // Wait a moment then start polling
+      setTimeout(() => {
+        if (!isConnected && connectingRef.current) {
+          setUiStatus("📱 Approve in Trust Wallet & return to Telegram");
+          startPolling();
+        }
+      }, 2000);
+
+      // Overall timeout
+      timeoutRef.current = setTimeout(() => {
+        if (!isConnected && connectingRef.current) {
+          setUiStatus("⏱️ Connection timeout. Tap retry.");
+          setIsLoading(false);
+          connectingRef.current = false;
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+        }
+      }, 30000);
+
+    } catch (err) {
+      console.error("Connection error:", err);
+      
+      // Check if it's a modal close/error
+      if (err.message?.includes("closed") || err.message?.includes("reject")) {
+        setUiStatus("❌ Connection rejected. Tap retry.");
+      } else {
+        setUiStatus(`❌ Error: ${err.message?.slice(0, 40) || "Connection failed"}`);
+      }
+      
+      setIsLoading(false);
+      connectingRef.current = false;
+    }
+  };
+
+  // -------------------------
+  // HANDLE CONNECTION WITH DIRECT DEEP LINK
+  // -------------------------
+  const connectWithDeepLink = async () => {
+    if (connectingRef.current || isLoading) return;
+
+    // Cleanup
+    cleanupSessions();
+    if (isConnected) {
+      await disconnect();
+    }
+
+    connectingRef.current = true;
+    setIsLoading(true);
+    setUiStatus("🔗 Generating connection...");
+
+    try {
+      // Create a new WalletConnect connector with specific options
+      const wcConnector = walletConnect({
+        projectId: projectId,
+        showQrModal: true,
+        qrModalOptions: {
+          themeMode: 'dark',
+          themeVariables: {
+            '--wcm-z-index': '9999',
+          }
+        },
+        metadata: {
+          name: "BARIN Game",
+          description: "BARIN Game Mini App",
+          url: "https://barin-app.vercel.app",
+          icons: ["https://barin-app.vercel.app/icon.png"],
+        },
+      });
+
+      // Connect using the new connector
+      await connect({ connector: wcConnector });
+
+      setUiStatus("📱 Check Trust Wallet");
+      
+      // Start polling
+      setTimeout(() => {
+        if (!isConnected && connectingRef.current) {
+          setUiStatus("📱 Approve in Trust Wallet & return");
+          startPolling();
+        }
+      }, 3000);
+
+      // Timeout
+      timeoutRef.current = setTimeout(() => {
+        if (!isConnected && connectingRef.current) {
+          setUiStatus("⏱️ Timeout. Try again.");
+          setIsLoading(false);
+          connectingRef.current = false;
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+        }
+      }, 30000);
+
+    } catch (err) {
+      console.error("Deep link error:", err);
+      setUiStatus("❌ Connection failed. Tap retry.");
+      setIsLoading(false);
+      connectingRef.current = false;
+    }
+  };
+
+  // -------------------------
+  // MONITOR CONNECTION STATUS
+  // -------------------------
+  useEffect(() => {
+    console.log("Status changed:", { status, isConnected, address });
+    
+    if (isConnected && address) {
+      setUiStatus(`✅ Connected ${address.slice(0, 6)}...${address.slice(-4)}`);
+      setIsLoading(false);
+      connectingRef.current = false;
+      
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    }
+  }, [status, isConnected, address]);
+
+  // -------------------------
+  // HANDLE VISIBILITY CHANGE
   // -------------------------
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        console.log("App became visible - checking connection...");
-        
-        // Dispatch events to wake up the connection
+        console.log("App returned to foreground");
         window.dispatchEvent(new Event("focus"));
         window.dispatchEvent(new Event("resize"));
         
-        // If we were in a connecting state, actively poll for connection
-        if (connectingRef.current) {
-          setUiStatus("Checking connection status...");
-          startPollingForConnection();
+        // If we were connecting, try to check status
+        if (connectingRef.current && !isConnected) {
+          setUiStatus("🔄 Checking connection...");
+          
+          // Force a status check
+          const wcConnector = getWCConnector();
+          if (wcConnector) {
+            // Check if there's a session
+            const hasSession = Object.keys(localStorage).some(key => 
+              key.includes("walletconnect") && localStorage.getItem(key)
+            );
+            
+            if (hasSession) {
+              console.log("Found session, attempting to finalize connection");
+              // Try to reconnect
+              connect({ connector: wcConnector }).catch(console.log);
+            }
+          }
         }
       }
     };
@@ -59,232 +303,11 @@ export default function Wallet() {
     
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
     };
-  }, []);
+  }, [isConnected]);
 
   // -------------------------
-  // POLL FOR CONNECTION
-  // -------------------------
-  const startPollingForConnection = () => {
-    // Clear any existing poll
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
-      pollIntervalRef.current = null;
-    }
-
-    let pollCount = 0;
-    const maxPolls = 15; // Poll for 15 seconds max
-
-    pollIntervalRef.current = setInterval(() => {
-      pollCount++;
-      console.log(`Polling for connection... (${pollCount}/${maxPolls})`);
-      
-      // Force a status check
-      window.dispatchEvent(new Event("focus"));
-      
-      // If connected, stop polling
-      if (isConnected) {
-        console.log("Connection detected!");
-        setUiStatus("Connected ✅");
-        setIsLoading(false);
-        connectingRef.current = false;
-        setShowRetry(false);
-        if (pollIntervalRef.current) {
-          clearInterval(pollIntervalRef.current);
-          pollIntervalRef.current = null;
-        }
-        return;
-      }
-      
-      // If max polls reached, show retry option
-      if (pollCount >= maxPolls) {
-        console.log("Polling timeout - showing retry");
-        setUiStatus("Connection timeout. Please try again.");
-        setIsLoading(false);
-        connectingRef.current = false;
-        setShowRetry(true);
-        if (pollIntervalRef.current) {
-          clearInterval(pollIntervalRef.current);
-          pollIntervalRef.current = null;
-        }
-      }
-    }, 1000);
-  };
-
-  // -------------------------
-  // MONITOR CONNECTION STATUS
-  // -------------------------
-  useEffect(() => {
-    console.log("Status update:", { status, isConnected, address });
-    
-    if (isConnected && address) {
-      setUiStatus(`Connected ✅ ${address.slice(0, 6)}...${address.slice(-4)}`);
-      setIsLoading(false);
-      connectingRef.current = false;
-      setShowRetry(false);
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-    } else if (status === "connecting") {
-      setUiStatus("Connecting...");
-      setIsLoading(true);
-    } else if (status === "disconnected") {
-      setUiStatus("Not Connected");
-      setIsLoading(false);
-      connectingRef.current = false;
-    }
-  }, [status, isConnected, address]);
-
-  // -------------------------
-  // HANDLE CONNECTION ERROR
-  // -------------------------
-  useEffect(() => {
-    if (error) {
-      console.error("Connection error:", error);
-      setIsLoading(false);
-      connectingRef.current = false;
-      setShowRetry(true);
-      
-      // Stop any polling
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-      
-      let errorMessage = "Connection failed";
-      if (error.message?.toLowerCase().includes("reject") || 
-          error.message?.toLowerCase().includes("deny") ||
-          error.message?.toLowerCase().includes("user rejected")) {
-        errorMessage = "Connection rejected in wallet ❌";
-      } else if (error.message?.toLowerCase().includes("timeout")) {
-        errorMessage = "Connection timed out ⏱️";
-      } else if (error.message) {
-        errorMessage = error.message.slice(0, 60);
-      }
-      
-      setUiStatus(errorMessage);
-      
-      // Auto clear after 5 seconds
-      const timer = setTimeout(() => {
-        if (!isConnected) {
-          setUiStatus("Not Connected");
-          setShowRetry(false);
-        }
-      }, 5000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [error, isConnected]);
-
-  // -------------------------
-  // CONNECT HANDLER
-  // -------------------------
-  const handleConnect = async (id) => {
-    // Prevent multiple attempts
-    if (connectingRef.current || isLoading) {
-      console.log("Connection already in progress");
-      return;
-    }
-
-    // Clean up existing connection
-    if (isConnected) {
-      await disconnect();
-      await new Promise(resolve => setTimeout(resolve, 500));
-      cleanupSessions();
-    }
-
-    // Reset states
-    connectingRef.current = true;
-    setIsLoading(true);
-    setShowRetry(false);
-    setUiStatus("Opening wallet...");
-
-    // Clear any existing timeouts/intervals
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
-      pollIntervalRef.current = null;
-    }
-
-    try {
-      const connector = connectors.find((c) => c.id === id);
-      if (!connector) {
-        throw new Error("Connector not found");
-      }
-
-      console.log(`Connecting with: ${connector.id}`);
-
-      // Special handling for WalletConnect
-      if (id === "walletConnect") {
-        setUiStatus("Opening Trust Wallet...");
-        
-        // Initiate connection
-        await connect({ connector });
-        
-        // After connection attempt, start polling
-        setUiStatus("📱 Approve in Trust Wallet & return to Telegram");
-        
-        // Start polling for connection after 2 seconds
-        setTimeout(() => {
-          if (!isConnected && connectingRef.current) {
-            startPollingForConnection();
-          }
-        }, 2000);
-        
-        // Set a timeout for overall connection
-        timeoutRef.current = setTimeout(() => {
-          if (!isConnected && connectingRef.current) {
-            setUiStatus("⏱️ Connection taking too long. Try again.");
-            setIsLoading(false);
-            connectingRef.current = false;
-            setShowRetry(true);
-            if (pollIntervalRef.current) {
-              clearInterval(pollIntervalRef.current);
-              pollIntervalRef.current = null;
-            }
-          }
-        }, 30000); // 30 second timeout
-        
-      } else {
-        // MetaMask or Coinbase
-        if (!connector.ready) {
-          throw new Error(`${connector.name || 'Wallet'} is not ready`);
-        }
-        await connect({ connector });
-        setUiStatus("Connected!");
-      }
-
-    } catch (err) {
-      console.error("Connection error:", err);
-      setUiStatus(`Error: ${err.message?.slice(0, 50) || "Connection failed"}`);
-      setIsLoading(false);
-      connectingRef.current = false;
-      setShowRetry(true);
-    }
-  };
-
-  // -------------------------
-  // RETRY CONNECTION
-  // -------------------------
-  const handleRetry = () => {
-    setShowRetry(false);
-    handleConnect("walletConnect");
-  };
-
-  // -------------------------
-  // DISCONNECT HANDLER
+  // DISCONNECT
   // -------------------------
   const handleDisconnect = async () => {
     try {
@@ -293,15 +316,14 @@ export default function Wallet() {
       setUiStatus("Disconnected");
       setIsLoading(false);
       connectingRef.current = false;
-      setShowRetry(false);
       
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
-      }
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
       }
       
       setTimeout(() => setUiStatus("Not Connected"), 500);
@@ -327,23 +349,31 @@ export default function Wallet() {
         
         <p className={`mt-2 text-sm ${
           uiStatus.includes("✅") ? "text-green-400" :
-          uiStatus.includes("...") ? "text-yellow-400" :
-          uiStatus.includes("Error") || uiStatus.includes("❌") ? "text-red-400" :
+          uiStatus.includes("🔄") ? "text-yellow-400" :
+          uiStatus.includes("❌") ? "text-red-400" :
           uiStatus.includes("📱") ? "text-blue-400" :
           uiStatus.includes("⏱️") ? "text-orange-400" :
           "text-cyan-400"
         }`}>
-          {isLoading && uiStatus.includes("...") ? "⏳ " : ""}
           {uiStatus}
         </p>
         
-        {showRetry && !isConnected && (
-          <button
-            onClick={handleRetry}
-            className="mt-3 bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg transition-colors text-sm"
-          >
-            🔄 Retry Connection
-          </button>
+        {/* RETRY BUTTON */}
+        {!isConnected && (uiStatus.includes("retry") || uiStatus.includes("Timeout") || uiStatus.includes("Error")) && (
+          <div className="mt-3 flex gap-2 justify-center">
+            <button
+              onClick={connectToWalletConnect}
+              className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg transition-colors text-sm"
+            >
+              🔄 Retry Connection
+            </button>
+            <button
+              onClick={connectWithDeepLink}
+              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors text-sm"
+            >
+              🔗 Try Alternative
+            </button>
+          </div>
         )}
         
         {isConnected && (
@@ -360,63 +390,69 @@ export default function Wallet() {
             <div className="h-full bg-gradient-to-r from-purple-500 to-blue-500 animate-pulse w-1/2 rounded-full"></div>
           </div>
         )}
+        
+        {connectionAttempt > 0 && !isConnected && (
+          <p className="mt-2 text-xs text-gray-500">Attempt #{connectionAttempt}</p>
+        )}
       </div>
 
       {/* WALLET BUTTONS */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="space-y-3">
         <button
-          onClick={() => handleConnect("metaMaskSDK")}
+          onClick={connectToWalletConnect}
           disabled={isLoading}
-          className={`bg-slate-900 border border-slate-700 rounded-xl p-4 hover:border-orange-500 transition-colors ${
+          className={`w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-xl p-4 transition-colors ${
             isLoading ? "opacity-50 cursor-not-allowed" : ""
           }`}
         >
-          <div className="flex flex-col items-center">
-            <span className="text-sm">MetaMask</span>
+          <div className="flex items-center justify-center gap-3">
+            <span className="text-lg font-bold">Trust Wallet</span>
+            <span className="text-sm bg-white/20 px-2 py-1 rounded">via WalletConnect</span>
           </div>
         </button>
 
         <button
-          onClick={() => handleConnect("walletConnect")}
+          onClick={() => {
+            // For MetaMask
+            const connector = connectors.find(c => c.id === "metaMaskSDK");
+            if (connector) connect({ connector });
+          }}
           disabled={isLoading}
-          className={`bg-slate-900 border border-slate-700 rounded-xl p-4 hover:border-purple-500 transition-colors ${
-            isLoading ? "opacity-50 cursor-not-allowed" : ""
-          } relative`}
-        >
-          <div className="flex flex-col items-center">
-            <span className="text-sm font-medium">Trust Wallet</span>
-            <span className="text-xs text-gray-500 mt-1">via WalletConnect</span>
-          </div>
-          {isLoading && (
-            <div className="absolute top-2 right-2 w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
-          )}
-        </button>
-
-        <button
-          onClick={() => handleConnect("coinbaseWalletSDK")}
-          disabled={isLoading}
-          className={`bg-slate-900 border border-slate-700 rounded-xl p-4 hover:border-blue-500 transition-colors ${
+          className={`w-full bg-slate-900 border border-slate-700 hover:border-orange-500 rounded-xl p-4 transition-colors ${
             isLoading ? "opacity-50 cursor-not-allowed" : ""
           }`}
         >
-          <div className="flex flex-col items-center">
-            <span className="text-sm">Coinbase</span>
+          <div className="flex items-center justify-center gap-3">
+            <span className="text-lg">MetaMask</span>
+          </div>
+        </button>
+
+        <button
+          onClick={() => {
+            const connector = connectors.find(c => c.id === "coinbaseWalletSDK");
+            if (connector) connect({ connector });
+          }}
+          disabled={isLoading}
+          className={`w-full bg-slate-900 border border-slate-700 hover:border-blue-500 rounded-xl p-4 transition-colors ${
+            isLoading ? "opacity-50 cursor-not-allowed" : ""
+          }`}
+        >
+          <div className="flex items-center justify-center gap-3">
+            <span className="text-lg">Coinbase Wallet</span>
           </div>
         </button>
       </div>
       
       {/* DETAILED INSTRUCTIONS */}
-      <div className="mt-6 text-xs text-gray-500 text-center space-y-1 bg-slate-900/50 rounded-lg p-4 border border-slate-800">
-        <p className="text-gray-400 font-medium mb-2">📋 How to Connect Trust Wallet:</p>
-        <p>1️⃣ Tap <span className="text-purple-400">Trust Wallet</span> button above</p>
-        <p>2️⃣ Trust Wallet will open sssssautomatically</p>
+      <div className="mt-6 text-xs text-gray-500 text-center bg-slate-900/50 rounded-lg p-4 border border-slate-800">
+        <p className="text-gray-400 font-medium mb-2">📋 How to Connect:</p>
+        <p>1️⃣ Tap <span className="text-purple-400 font-medium">Trust Wallet</span> button above</p>
+        <p>2️⃣ Trust Wallet will open automatically</p>
         <p>3️⃣ Enter your password and unlock</p>
         <p>4️⃣ Tap <span className="text-green-400">"Connect"</span> or <span className="text-green-400">"Approve"</span></p>
         <p>5️⃣ <span className="text-yellow-400 font-medium">Manually return to Telegram</span></p>
         <p className="text-blue-400 mt-2">⏳ The app will auto-detect your return</p>
-        {uiStatus.includes("Error") && (
-          <p className="text-red-400 mt-2">❌ If it fails, tap "Retry Connection"</p>
-        )}
+        <p className="text-gray-600 mt-2">If it doesn't work, try the <span className="text-blue-400">"Try Alternative"</span> button</p>
       </div>
     </div>
   );

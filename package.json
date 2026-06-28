@@ -17,6 +17,7 @@
     "@tanstack/react-query": "^5.101.1",
     "@telegram-apps/sdk": "^3.11.8",
     "@walletconnect/ethereum-provider": "^2.23.10",
+    "@walletconnect/web3wallet": "^1.16.1",
     "axios": "^1.17.0",
     "firebase": "^12.15.0",
     "i18next": "^26.3.1",
