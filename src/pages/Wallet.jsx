@@ -55,7 +55,7 @@ export default function Wallet() {
                         border: "none"
                     }}
                 >
-                    {loading ? "Connecting..." : "Connect Wallet"}
+                    {loading ? "Connecting..." : "Connedct Wallet"}
                 </button>
 
             ) : (

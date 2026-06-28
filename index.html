@@ -5,48 +5,32 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>barin-mining-quest</title>
+
+    <!-- Telegram WebApp -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <!-- 🚀 SAFE GLOBAL ERROR HANDLER (ONLY THIS IS NEEDED) -->
+    <script>
+      window.addEventListener("error", function (e) {
+        if (
+          e.message &&
+          e.message.includes("ERR_UNKNOWN_URL_SCHEME")
+        ) {
+          console.log("Blocked Telegram URL scheme error:", e.message);
+          e.preventDefault();
+        }
+      });
+
+      window.addEventListener("unhandledrejection", function (e) {
+        console.log("Unhandled promise:", e.reason);
+      });
+    </script>
+
   </head>
+
   <body>
     <div id="root"></div>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
     <script type="module" src="/src/main.jsx"></script>
-   <script>
-document.addEventListener("click", function (e) {
-
-    let el = e.target;
-
-    while (el) {
-
-        if (el.tagName === "A") {
-
-            const href = el.getAttribute("href");
-
-            if (
-                href &&
-                (href.startsWith("wc:") ||
-                 href.startsWith("tg:") ||
-                 href.startsWith("trust:") ||
-                 href.startsWith("metamask:"))
-            ) {
-                e.preventDefault();
-                console.log("Blocked unsafe scheme:", href);
-                return false;
-            }
-        }
-
-        el = el.parentElement;
-    }
-
-}, true);
-</script>
-
-<script>
-window.addEventListener("error", function (e) {
-    if (e.message && e.message.includes("ERR_UNKNOWN_URL_SCHEME")) {
-        console.log("Ignoring wallet redirect crash");
-        e.preventDefault();
-    }
-});
-</script>
   </body>
 </html>
