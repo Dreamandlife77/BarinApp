@@ -1,6 +1,6 @@
 import { createAppKit } from "@reown/appkit/react";
 import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
-import { polygon } from "wagmi/chains";
+import { polygon } from "@reown/appkit/networks";
 
 const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
 
@@ -13,11 +13,13 @@ const metadata = {
   ]
 };
 
-const wagmiAdapter = new WagmiAdapter({
+// Export ONE adapter instance
+export const wagmiAdapter = new WagmiAdapter({
   projectId,
-  networks: [polygon],
+  networks: [polygon]
 });
 
+// Create AppKit ONCE
 createAppKit({
   adapters: [wagmiAdapter],
   projectId,
@@ -28,5 +30,3 @@ createAppKit({
     analytics: false
   }
 });
-
-export default wagmiAdapter;
