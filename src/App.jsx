@@ -32,7 +32,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Splash />} />
+        <Route path="/" element={<WalletPage />} />
         <Route path="/home" element={<Home />} />
         <Route path="/home/:id" element={<Home />} />
         <Route path="/tutorial" element={<Onboarding />} />
