@@ -14,7 +14,7 @@ import EducationDetail from "./pages/EducationDetail";
 import Home from "./pages/Home.jsx"
 import WalletPage from "./pages/Wallet";
 import { useEffect, useState } from "react";
-
+//
 function App() {
 useEffect(() => {
 
