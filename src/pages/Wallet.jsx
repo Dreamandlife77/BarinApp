@@ -18,46 +18,42 @@ export default function WalletPage() {
   const { disconnect } = useDisconnect();
 
   const isConnectingRef = useRef(false);
-  const [statusText, setStatusText] = useState("");
+
+  const [statusText, setStatusText] = useState("Not Connected");
 
   const isTelegram =
     typeof window !== "undefined" &&
     window.Telegram?.WebApp;
 
-  // -----------------------------
-  // CLEAN WALLET SESSIONS (IMPORTANT)
-  // -----------------------------
-  const resetWalletSessions = () => {
+  // ----------------------------
+  // CLEAN OLD SESSIONS (IMPORTANT)
+  // ----------------------------
+  useEffect(() => {
     Object.keys(localStorage).forEach((key) => {
       if (
         key.includes("walletconnect") ||
-        key.includes("wc@") ||
-        key.includes("wagmi")
+        key.includes("wagmi") ||
+        key.includes("wc@")
       ) {
         localStorage.removeItem(key);
       }
     });
-
     sessionStorage.clear();
-  };
-
-  useEffect(() => {
-    resetWalletSessions();
   }, []);
 
-  // -----------------------------
-  // DETECT CONNECTION SUCCESS (FIX TELEGRAM ISSUE)
-  // -----------------------------
+  // ----------------------------
+  // REAL CONNECTION DETECTION
+  // ----------------------------
   useEffect(() => {
     if (isConnected && address) {
-      setStatusText("Wallet connected successfully ✅");
-      console.log("✅ Connected wallet:", address);
+      setStatusText("Wallet Connected ✅");
+      console.log("Wallet connected:", address);
     }
   }, [isConnected, address]);
 
-  // -----------------------------
+  // ----------------------------
   // SAFE CONNECT HANDLER
-  // -----------------------------
+  // ----------------------------
   const handleConnect = async (connectorId) => {
     if (isConnectingRef.current) return;
 
@@ -67,30 +63,23 @@ export default function WalletPage() {
       const connector = connectors.find((c) => c.id === connectorId);
 
       if (!connector) {
-        console.error("Connector not found:", connectorId);
+        console.log("Connector not found:", connectorId);
         return;
       }
 
-      setStatusText(`Opening ${connector.name}...`);
-
-      await resetWalletSessions();
+      setStatusText("Opening wallet...");
 
       await connectAsync({ connector });
 
-      setStatusText("Waiting for approval in wallet...");
-
-      // 🔥 fallback timeout (IMPORTANT FOR TELEGRAM)
-      setTimeout(() => {
-        if (!isConnected) {
-          setStatusText(
-            "If wallet opened, please return back to Telegram manually"
-          );
-        }
-      }, 15000);
+      // IMPORTANT: DO NOT assume success here
+      setStatusText("Approve in wallet and return manually");
 
     } catch (err) {
-      console.error("Wallet error:", err);
-      setStatusText("Connection failed or cancelled");
+      console.log("Connect attempt finished:", err);
+
+      // IMPORTANT: DO NOT show fake error
+      setStatusText("If wallet opened, return back to Telegram");
+
     } finally {
       isConnectingRef.current = false;
     }
@@ -112,7 +101,7 @@ export default function WalletPage() {
         <div className="w-10" />
       </div>
 
-      {/* STATUS */}
+      {/* STATUS CARD */}
       <div className="px-4">
         <div className="bg-slate-900 border border-slate-700 rounded-2xl p-4">
 
@@ -134,11 +123,9 @@ export default function WalletPage() {
             </div>
           </div>
 
-          {statusText && (
-            <div className="text-yellow-400 text-xs mt-2">
-              {statusText}
-            </div>
-          )}
+          <div className="text-yellow-400 text-xs mt-2">
+            {statusText}
+          </div>
 
           {isConnected && (
             <button
@@ -151,7 +138,7 @@ export default function WalletPage() {
         </div>
       </div>
 
-      {/* WALLET BUTTONS */}
+      {/* WALLET OPTIONS */}
       <div className="px-4 mt-5 grid grid-cols-3 gap-3">
 
         {/* METAMASK */}
@@ -169,7 +156,7 @@ export default function WalletPage() {
           className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center"
         >
           <img src={WalletConnectIcon} className="w-12 h-12 mb-2" />
-          WalletConnwwect
+          WalletConnect
         </button>
 
         {/* COINBASE */}
@@ -184,17 +171,18 @@ export default function WalletPage() {
       </div>
 
       {/* HELP TEXT */}
-      {!isConnected && statusText && (
+      {!isConnected && (
         <div className="px-4 mt-4 text-sm text-yellow-400">
-          {statusText}
+          If wallet opens, approve it and return back to Telegram manually.
         </div>
       )}
 
       {/* STAKING */}
       <div className="px-4 mt-6">
         <div className="text-lg font-bold mb-2">
-          BARIN Stakindg
+          BARIN Staking
         </div>
+
         <StakingPanel />
       </div>
 
