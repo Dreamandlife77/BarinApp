@@ -42,34 +42,23 @@ export default function WalletPage() {
   // -----------------------------
   // CONNECT HANDLER (SAFE)
   // -----------------------------
-  const handleConnect = async (id) => {
-    if (isConnecting.current) return;
-    isConnecting.current = true;
+ const handleConnect = async (id) => {
+  try {
+    const connector = connectors.find((c) => c.id === id);
+    if (!connector) return;
 
-    try {
-      const connector = connectors.find((c) => c.id === id);
+    setStatus("Opening wallet...");
 
-      if (!connector) {
-        console.log("Connector not found:", id);
-        return;
-      }
+    await connectAsync({ connector });
 
-      setStatus("Opening wallet...");
+    setStatus("Approve in wallet app");
 
-      await connectAsync({ connector });
+  } catch (err) {
+    console.log("Wallet error:", err);
 
-      // IMPORTANT: DO NOT assume success immediately
-      setStatus("Approve in wallet and return to Telegram");
-
-    } catch (err) {
-      console.log("Wallet flow (NOT real error):", err);
-
-      // NEVER show fake failure in Telegram
-      setStatus("If wallet opened, approve and return manually");
-    } finally {
-      isConnecting.current = false;
-    }
-  };
+    setStatus("If wallet opened, approve manually and return");
+  }
+};
 
   return (
     <div className="min-h-screen bg-[#020617] text-white pb-24">
