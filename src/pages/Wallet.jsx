@@ -10,82 +10,68 @@ export default function Wallet() {
 
     const [loading, setLoading] = useState(false);
 
-    // 🔥 SAFE SESSION RECOVERY (ONLY ON LOAD)
+    // 🔥 STEP 1: CHECK IF COMPONENT LOADS
     useEffect(() => {
-
-        const session = localStorage.getItem("wc@2:client");
-
-        if (session && !isConnected) {
-            console.log("🔄 Found session, waiting for restore...");
-        }
-
+        alert("Wallet component loaded");
+        console.log("Wallet component loaded");
     }, []);
 
-    // 🔥 SAFE CONNECT FUNCTION
+    // 🔥 STEP 2: WATCH CONNECTION STATE
+    useEffect(() => {
+        alert("State changed: isConnected = " + isConnected + " address = " + address);
+        console.log("STATE:", { isConnected, address });
+    }, [isConnected, address]);
+
+    // 🔥 STEP 3: CONNECT WALLET
     const connectWallet = async () => {
 
         try {
 
-            setLoading(true);
+            alert("STEP 1: open() called");
 
-            console.log("📲 Opening wallet...");
+            setLoading(true);
 
             await open({ view: "Connect" });
 
-            // DO NOT WAIT FOR RETURN (Telegram breaks return)
+            alert("STEP 2: open() returned");
+
             setTimeout(() => {
-                console.log("⏳ Waiting for wallet state sync...");
+                alert("STEP 3: waiting for wagmi state update");
                 setLoading(false);
             }, 5000);
 
         } catch (err) {
-            console.log("❌ Wallet open error:", err);
+
+            alert("ERROR in open(): " + err?.message);
+
+            console.log(err);
+
             setLoading(false);
         }
     };
 
+    // 🔥 STEP 4: UI
     return (
         <div style={{ padding: 20 }}>
 
-            {/* NOT CONNECTED */}
             {!isConnected ? (
 
-                <button
-                    onClick={connectWallet}
-                    disabled={loading}
-                    style={{
-                        padding: "10px 20px",
-                        background: loading ? "gray" : "green",
-                        color: "white",
-                        border: "none",
-                        borderRadius: 8
-                    }}
-                >
-                    {loading ? "Connecting..." : "Connect Wallet"}
+                <button onClick={connectWallet} disabled={loading}>
+                    {loading ? "Connecdting..." : "Connect Wallet"}
                 </button>
 
             ) : (
 
-                /* CONNECTED STATE */
                 <div>
 
-                    <h3>✅ Wallet Connected</h3>
+                    <h3>Connected</h3>
 
-                    <p style={{ fontSize: 12 }}>
-                        {address}
-                    </p>
+                    <p>{address}</p>
 
-                    <button
-                        onClick={() => disconnect()}
-                        style={{
-                            marginTop: 10,
-                            padding: "8px 16px",
-                            background: "red",
-                            color: "white",
-                            border: "none",
-                            borderRadius: 8
-                        }}
-                    >
+                    <button onClick={() => {
+                        alert("Disconnect clicked");
+                        disconnect();
+                    }}>
                         Disconnect
                     </button>
 
