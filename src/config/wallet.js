@@ -32,12 +32,14 @@ createAppKit({
     socials: false
   },
 
-  // 🔥 CRITICAL FOR TELEGRAM
+  // 🔥 CRITICAL FIX
   enableWalletConnect: true,
+  enableInjected: true,
 
-  // 🔥 FORCE NEW SESSION EACH TIME (prevents reuse of broken link)
+  // 🔥 FORCE SAFE STORAGE
   storage: "localStorage",
 
-  // 🔥 IMPORTANT
-  enableInjected: true
+  // 🔥 DISABLE AUTO REDIRECT HANDLING
+  // (prevents wc:// crash loop in Telegram)
+  debug: false
 });

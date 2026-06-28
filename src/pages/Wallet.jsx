@@ -7,76 +7,38 @@ export default function Wallet() {
     const { open } = useAppKit();
     const { address, isConnected } = useAccount();
     const { disconnect } = useDisconnect();
-    
 
     useEffect(() => {
-
-    const interval = setInterval(() => {
-
-        // 🔥 FORCE wagmi to re-evaluate connection state
-        if (document.visibilityState === "visible") {
-            console.log("checking wallet state...");
-        }
-
-    }, 1500);
-
-    return () => clearInterval(interval);
-
-}, [isConnected]);
+        console.log("Wallet state:", { isConnected, address });
+    }, [isConnected, address]);
 
     return (
-        <div style={{ padding: "10px" }}>
+        <div>
 
-            {
-                isConnected ? (
+            {!isConnected ? (
 
-                    <div>
+                <button
+                    onClick={() => open({ view: "Connect" })}
+                >
+                    Connect Wallet
+                </button>
 
-                        <p>✅ Connected</p>
+            ) : (
 
-                        <p style={{ fontSize: "12px" }}>
-                            {address}
-                        </p>
+                <div>
 
-                        <button
-                            onClick={() => disconnect()}
-                            style={{
-                                marginTop: "10px",
-                                padding: "10px",
-                                background: "red",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "6px",
-                                cursor: "pointer"
-                            }}
-                        >
-                            Disconnect Wallet
-                        </button>
-
-                    </div>
-
-                ) : (
+                    <p>Connected</p>
+                    <p style={{ fontSize: 12 }}>{address}</p>
 
                     <button
-                        onClick={() => {
-    open({
-        view: "Connect"
-    });
-}}
-                        style={{
-                            padding: "10px",
-                            background: "green",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "6px",
-                            cursor: "pointer"
-                        }}
+                        onClick={() => disconnect()}
                     >
-                        Connectddsss Wallet
+                        Disconnect
                     </button>
 
-                )
-            }
+                </div>
+
+            )}
 
         </div>
     );
