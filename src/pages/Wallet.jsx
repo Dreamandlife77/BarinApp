@@ -7,13 +7,15 @@ import WalletConnectIcon from "../assets/Wallet/WalletConnect.png";
 
 export default function Wallet() {
   const { address, isConnected } = useAccount();
-  const { connectors, connect } = useConnect();
+  const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
 
-  const isConnecting = useRef(false);
   const [status, setStatus] = useState("Not Connected");
+  const connectingRef = useRef(false);
 
-  // 🔥 AUTO DETECT REAL CONNECTION (MOST IMPORTANT FIX)
+  // ----------------------------
+  // AUTO SYNC CONNECTION STATE (IMPORTANT FIX)
+  // ----------------------------
   useEffect(() => {
     if (isConnected && address) {
       setStatus("Connected ✅");
@@ -22,7 +24,9 @@ export default function Wallet() {
     }
   }, [isConnected, address]);
 
-  // 🧹 CLEAN OLD WALLET SESSIONS
+  // ----------------------------
+  // CLEAN OLD WALLET SESSIONS
+  // ----------------------------
   useEffect(() => {
     Object.keys(localStorage).forEach((key) => {
       if (key.includes("walletconnect") || key.includes("wc@")) {
@@ -31,10 +35,12 @@ export default function Wallet() {
     });
   }, []);
 
-  // 🔗 SAFE CONNECT
+  // ----------------------------
+  // CONNECT HANDLER (SAFE)
+  // ----------------------------
   const handleConnect = async (id) => {
-    if (isConnecting.current) return;
-    isConnecting.current = true;
+    if (connectingRef.current) return;
+    connectingRef.current = true;
 
     try {
       const connector = connectors.find((c) => c.id === id);
@@ -42,52 +48,54 @@ export default function Wallet() {
 
       setStatus("Opening wallet...");
 
+      // IMPORTANT: do NOT await state here
       connect({ connector });
 
-      // IMPORTANT: DO NOT WAIT FOR RESULT
-      setStatus("Approve in wallet and return to app");
+      setStatus("Approve in wallet and return manually");
 
     } catch (err) {
-      console.log("connect error (ignored):", err);
+      console.log("Connect error (ignored):", err);
+      setStatus("Wallet opened — complete approval in app");
     } finally {
-      isConnecting.current = false;
+      connectingRef.current = false;
     }
   };
 
   return (
-    <div className="p-4 text-white">
+    <div style={{ padding: 20, color: "white" }}>
 
       {/* STATUS */}
-      <div className="p-4 bg-slate-900 rounded-xl mb-4">
-        <div className="text-sm text-gray-400">Wallet Status</div>
-        <div className="font-bold">
-          {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Not Connected"}
-        </div>
-        <div className="text-yellow-400 text-xs mt-2">
-          {status}
-        </div>
+      <div style={{ marginBottom: 20 }}>
+        <h3>Wallet Status</h3>
+
+        <p>
+          {address
+            ? `${address.slice(0, 6)}...${address.slice(-4)}`
+            : "Not Connected"}
+        </p>
+
+        <p style={{ color: "orange" }}>{status}</p>
 
         {isConnected && (
-          <button
-            onClick={() => disconnect()}
-            className="mt-3 bg-red-500 px-4 py-2 rounded-lg"
-          >
+          <button onClick={() => disconnect()}>
             Disconnect
           </button>
         )}
       </div>
 
       {/* BUTTONS */}
-      <div className="grid grid-cols-3 gap-3">
+      <div style={{ display: "flex", gap: 10 }}>
 
-     
+        <button onClick={() => handleConnect("metaMaskSDK")}>
+          <img src={MetaMaskIcon} width={40} />
+          MetaMask
+        </button>
 
-        <button onClick={() => handleConnect("walletConnect")} className="bg-gray-800 p-3 rounded-xl">
-          <img src={WalletConnectIcon} className="w-10 mx-auto" />
+        <button onClick={() => handleConnect("walletConnect")}>
+          <img src={WalletConnectIcon} width={40} />
           WalletConnect
         </button>
 
-    
 
       </div>
     </div>
