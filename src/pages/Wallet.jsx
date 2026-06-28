@@ -72,7 +72,7 @@ export default function Wallet() {
                             cursor: "pointer"
                         }}
                     >
-                        Connectds Wallet
+                        Connectddsss Wallet
                     </button>
 
                 )

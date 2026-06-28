@@ -23,21 +23,17 @@ function App() {
 
     useEffect(() => {
 
-        const stored = localStorage.getItem("wc@2:client");
+    const keys = Object.keys(localStorage);
 
-        // 🔥 SAFE RECOVERY (NO LOOP)
-        if (stored && !isConnected) {
-
-            console.log("Wallet session detected but not connected");
-
-            const timer = setTimeout(() => {
-                window.location.reload();
-            }, 1200); // small delay prevents infinite reload loops
-
-            return () => clearTimeout(timer);
+    keys.forEach(k => {
+        if (k.includes("wc") || k.includes("walletconnect")) {
+            localStorage.removeItem(k);
         }
+    });
 
-    }, [isConnected]);
+    console.log("Cleaned corrupted wallet sessions");
+
+}, []);
 
     return (
         <BrowserRouter>

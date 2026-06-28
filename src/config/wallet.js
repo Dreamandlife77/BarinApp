@@ -27,15 +27,17 @@ createAppKit({
   defaultNetwork: polygon,
 
   features: {
-    analytics: false
+    analytics: false,
+    email: false,
+    socials: false
   },
 
-  // 🔥 ADD THIS (CRITICAL FOR MOBILE DEEP LINK RECOVERY)
+  // 🔥 CRITICAL FOR TELEGRAM
   enableWalletConnect: true,
 
-  // 🔥 IMPORTANT: force session persistence
-  enableInjected: true,
+  // 🔥 FORCE NEW SESSION EACH TIME (prevents reuse of broken link)
+  storage: "localStorage",
 
-  // 🔥 ADD THIS (VERY IMPORTANT)
-  storage: "localStorage"
+  // 🔥 IMPORTANT
+  enableInjected: true
 });
