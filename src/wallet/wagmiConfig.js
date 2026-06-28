@@ -23,18 +23,20 @@ export const wagmiConfig = createConfig({
         themeMode: 'dark',
         themeVariables: {
           '--wcm-z-index': '9999',
-        },
+          '--wcm-background-color': '#0f172a',
+          '--wcm-accent-color': '#8b5cf6',
+        }
       },
       metadata: {
         name: "BARIN Game",
         description: "BARIN Game Mini App",
-        url: "https://barin-app.vercel.app", // Your actual URL
-        icons: ["https://barin-app.vercel.app/icon.png"], // Optional
+        url: "https://barin-app.vercel.app",
+        icons: ["https://barin-app.vercel.app/icon.png"],
       },
     }),
     coinbaseWallet({
       appName: "BARIN Game",
-      appLogoUrl: "https://barin-app.vercel.app/icon.png", // Optional
+      appLogoUrl: "https://barin-app.vercel.app/icon.png",
     }),
   ],
   transports: {
