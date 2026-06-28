@@ -11,12 +11,41 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script type="module" src="/src/main.jsx"></script>
    <script>
-window.addEventListener("error", (e) => {
+document.addEventListener("click", function (e) {
 
-    if (e.message && e.message.includes("ERR_UNKNOWN_URL_SCHEME")) {
-        console.log("Blocked wallet deep link detected → ignoring");
+    let el = e.target;
+
+    while (el) {
+
+        if (el.tagName === "A") {
+
+            const href = el.getAttribute("href");
+
+            if (
+                href &&
+                (href.startsWith("wc:") ||
+                 href.startsWith("tg:") ||
+                 href.startsWith("trust:") ||
+                 href.startsWith("metamask:"))
+            ) {
+                e.preventDefault();
+                console.log("Blocked unsafe scheme:", href);
+                return false;
+            }
+        }
+
+        el = el.parentElement;
     }
 
+}, true);
+</script>
+
+<script>
+window.addEventListener("error", function (e) {
+    if (e.message && e.message.includes("ERR_UNKNOWN_URL_SCHEME")) {
+        console.log("Ignoring wallet redirect crash");
+        e.preventDefault();
+    }
 });
 </script>
   </body>

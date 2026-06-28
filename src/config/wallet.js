@@ -20,15 +20,24 @@ export const wagmiAdapter = new WagmiAdapter({
 });
 
 createAppKit({
-    adapters: [wagmiAdapter],
-    projectId,
-    metadata,
-    networks: [polygon],
-    defaultNetwork: polygon,
+  adapters: [wagmiAdapter],
+  projectId,
+  metadata,
+  networks: [polygon],
+  defaultNetwork: polygon,
 
-    features: {
-        analytics: false,
-        email: false,
-        socials: false
-    }
+  features: {
+    analytics: false,
+    email: false,
+    socials: false
+  },
+
+  enableWalletConnect: true,
+  enableInjected: true,
+
+  // 🔥 IMPORTANT
+  enableCoinbase: false,
+  enableEIP6963: true,
+
+  storage: "localStorage"
 });

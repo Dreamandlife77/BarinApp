@@ -15,39 +15,15 @@ import Home from "./pages/Home.jsx";
 import WalletPage from "./pages/Wallet";
 
 import { useEffect } from "react";
-import { useAccount } from "wagmi";
 
 function App() {
 
-    const { isConnected } = useAccount();
+    // ❌ DO NOT CLEAR WALLET STATE EVERY LOAD
+    // WalletConnect needs persistence
 
     useEffect(() => {
-
-    console.log("🔥 HARD RESET WalletConnect state");
-
-    localStorage.removeItem("walletconnect");
-    localStorage.removeItem("wc@2:client");
-    localStorage.removeItem("WALLETCONNECT_DEEPLINK_CHOICE");
-
-    sessionStorage.clear();
-
-}, []);
-
-    useEffect(() => {
-
-        const timer = setInterval(() => {
-
-            // 🔥 force wagmi state refresh
-            if (document.visibilityState === "visible") {
-                console.log("App active → syncing wallet state");
-            }
-
-        }, 2000);
-
-        return () => clearInterval(timer);
-
-    }, [isConnected]);
-
+        console.log("App started");
+    }, []);
 
     return (
         <BrowserRouter>

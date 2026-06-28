@@ -52,7 +52,7 @@ export default function Wallet() {
             {!isConnected ? (
 
                 <button onClick={connectWallet}>
-                    Connect Wallet
+                    Connect Wallets
                 </button>
 
             ) : (
