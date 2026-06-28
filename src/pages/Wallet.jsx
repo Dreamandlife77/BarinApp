@@ -111,7 +111,7 @@ export default function WalletPage() {
       </div>
 
       {/* WALLET BUTTONS */}
-      <div className="grid grid-cols-3 gap-3 px-4 mt-5">
+      <div className="grid grid gap-3 px-4 mt-5">
 
         {/* METAMASK */}
         {/* <button
