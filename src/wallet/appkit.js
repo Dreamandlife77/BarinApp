@@ -1,11 +1,16 @@
 import { createAppKit } from "@reown/appkit/react";
-import { wagmiAdapter } from "@reown/appkit-adapter-wagmi";
+import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import { polygon } from "@reown/appkit/networks";
 
-// 🔥 YOUR PROJECT ID
+// 🔥 PROJECT ID
 const projectId = "beb23aec824ef375771f0418bffcfd14";
 
-// 🔥 CREATE APPKIT INSTANCE
+// 🔥 CREATE WAGMI ADAPTER (IMPORTANT FIX)
+const wagmiAdapter = new WagmiAdapter({
+  projectId,
+  networks: [polygon],
+});
+
 export const appKit = createAppKit({
   adapters: [wagmiAdapter],
   projectId,
