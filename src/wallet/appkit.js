@@ -24,5 +24,6 @@ export const appKit = createAppKit({
 
   features: {
     analytics: false,
+    socials: false
   },
 });
