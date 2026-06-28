@@ -11,10 +11,12 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script type="module" src="/src/main.jsx"></script>
    <script>
-window.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") {
-        console.log("Telegram resumed");
+window.addEventListener("error", (e) => {
+
+    if (e.message && e.message.includes("ERR_UNKNOWN_URL_SCHEME")) {
+        console.log("Blocked wallet deep link detected → ignoring");
     }
+
 });
 </script>
   </body>

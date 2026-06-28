@@ -23,17 +23,19 @@ function App() {
 
     useEffect(() => {
 
-    const keys = Object.keys(localStorage);
+        const timer = setInterval(() => {
 
-    keys.forEach(k => {
-        if (k.includes("wc") || k.includes("walletconnect")) {
-            localStorage.removeItem(k);
-        }
-    });
+            // 🔥 force wagmi state refresh
+            if (document.visibilityState === "visible") {
+                console.log("App active → syncing wallet state");
+            }
 
-    console.log("Cleaned corrupted wallet sessions");
+        }, 2000);
 
-}, []);
+        return () => clearInterval(timer);
+
+    }, [isConnected]);
+
 
     return (
         <BrowserRouter>

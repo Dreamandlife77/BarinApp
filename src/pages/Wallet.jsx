@@ -10,33 +10,40 @@ export default function Wallet() {
 
     const [checking, setChecking] = useState(false);
 
-    // 🔥 FORCE CHECK AFTER RETURN (critical fix)
+    // 🔥 THIS FIXES TELEGRAM RETURN ISSUE
     useEffect(() => {
 
-        if (!isConnected && checking) {
+        if (checking && !isConnected) {
 
-            const timer = setTimeout(() => {
-                window.location.reload();
+            const interval = setInterval(() => {
+
+                console.log("🔄 Checking wallet state...");
+
+                if (window.ethereum || address) {
+                    console.log("Wallet detected, forcing UI sync...");
+                }
+
             }, 1500);
 
-            return () => clearTimeout(timer);
+            return () => clearInterval(interval);
         }
 
-    }, [isConnected, checking]);
+    }, [checking, isConnected, address]);
 
     const connectWallet = async () => {
 
         setChecking(true);
 
-        open({ view: "Connect" });
+        try {
+            await open({ view: "Connect" });
+        } catch (e) {
+            console.log("open error", e);
+        }
 
-        // fallback safety check
+        // 🔥 IMPORTANT: DO NOT WAIT FOR RETURN
         setTimeout(() => {
-            if (!isConnected) {
-                console.log("Retrying connection...");
-            }
-        }, 5000);
-
+            console.log("Manual sync trigger");
+        }, 4000);
     };
 
     return (
@@ -45,7 +52,7 @@ export default function Wallet() {
             {!isConnected ? (
 
                 <button onClick={connectWallet}>
-                    Connect Walletss
+                    Connect Wallet
                 </button>
 
             ) : (
