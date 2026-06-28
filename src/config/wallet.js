@@ -13,7 +13,7 @@ const metadata = {
   ]
 };
 
-// Export ONE adapter instance
+// 🔥 SINGLE ADAPTER
 export const wagmiAdapter = new WagmiAdapter({
   projectId,
   networks: [polygon]
@@ -29,24 +29,20 @@ createAppKit({
   features: {
     analytics: false,
 
-    // ❌ THIS DOES NOT REMOVE GOOGLE
-    socials: false,
-    email: false,
+    // ✅ KEEP EMAIL LOGIN
+    email: true,
 
-    // ✅ IMPORTANT: DISABLE AUTH METHODS UI
-    emailShowWallets: false,
+    // ❌ REMOVE SOCIAL LOGIN (Google, Apple, etc.)
+    socials: false
   },
 
-  // 🔥 THIS IS THE REAL FIX (IMPORTANT)
-  enableEmail: false,
+  // 🔥 IMPORTANT: force UI to NOT show social auth section
+  enableEmail: true,
   enableSocials: false,
 
-  // 🔥 ADD THIS (CRITICAL FOR MOBILE DEEP LINK RECOVERY)
+  // 🔥 IMPORTANT SAFETY FLAGS
   enableWalletConnect: true,
-
-  // 🔥 IMPORTANT: force session persistence
   enableInjected: true,
 
-  // 🔥 ADD THIS (VERY IMPORTANT)
   storage: "localStorage"
 });
