@@ -18,15 +18,7 @@ export const wagmiConfig = createConfig({
     }),
     walletConnect({
       projectId,
-      showQrModal: true,
-      qrModalOptions: {
-        themeMode: 'dark',
-        themeVariables: {
-          '--wcm-z-index': '9999',
-          '--wcm-background-color': '#0f172a',
-          '--wcm-accent-color': '#8b5cf6',
-        }
-      },
+      showQrModal: false, // Disable QR modal - we'll handle it manually
       metadata: {
         name: "BARIN Game",
         description: "BARIN Game Mini App",

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
-import { walletConnect } from "wagmi/connectors";
 
 export default function Wallet() {
   const { address, isConnected, status } = useAccount();
@@ -9,12 +8,11 @@ export default function Wallet() {
 
   const [uiStatus, setUiStatus] = useState("Not Connected");
   const [isLoading, setIsLoading] = useState(false);
-  const [connectionAttempt, setConnectionAttempt] = useState(0);
+  const [showQR, setShowQR] = useState(false);
+  const [wcUri, setWcUri] = useState("");
   const connectingRef = useRef(false);
   const timeoutRef = useRef(null);
   const intervalRef = useRef(null);
-
-  const projectId = "beb23aec824ef375771f0418bffcfd14";
 
   // -------------------------
   // CLEANUP FUNCTION
@@ -25,6 +23,7 @@ export default function Wallet() {
       keys.forEach(key => {
         if (key.includes("walletconnect") || key.includes("wc@") || key.includes("WALLETCONNECT")) {
           localStorage.removeItem(key);
+          console.log("Removed:", key);
         }
       });
       sessionStorage.clear();
@@ -33,63 +32,106 @@ export default function Wallet() {
     }
   };
 
+  // Run cleanup on mount
+  useEffect(() => {
+    cleanupSessions();
+  }, []);
+
   // -------------------------
-  // GET WALLETCONNECT CONNECTOR
+  // GENERATE QR CODE URI
   // -------------------------
-  const getWCConnector = () => {
-    return connectors.find(c => c.id === "walletConnect");
+  const generateWalletConnectURI = async () => {
+    try {
+      setUiStatus("🔗 Generating connection...");
+      setIsLoading(true);
+      
+      // Get the WalletConnect connector
+      const wcConnector = connectors.find(c => c.id === "walletConnect");
+      if (!wcConnector) {
+        throw new Error("WalletConnect connector not found");
+      }
+
+      // Get the URI from the connector
+      // @ts-ignore - getProvider might not be typed
+      const provider = await wcConnector.getProvider();
+      
+      // @ts-ignore - getUri might not be typed
+      const uri = await provider.connector?.uri || provider.uri;
+      
+      if (!uri) {
+        throw new Error("Failed to generate URI");
+      }
+
+      console.log("Generated URI:", uri);
+      setWcUri(uri);
+      setShowQR(true);
+      setUiStatus("📱 Scan QR code with Trust Wallet");
+      
+      // Start polling for connection
+      startPollingForConnection();
+      
+      return uri;
+    } catch (err) {
+      console.error("URI generation error:", err);
+      setUiStatus("❌ Failed to generate QR. Try again.");
+      setIsLoading(false);
+      return null;
+    }
   };
 
   // -------------------------
-  // POLL FOR CONNECTION STATUS
+  // POLL FOR CONNECTION
   // -------------------------
-  const startPolling = () => {
+  const startPollingForConnection = () => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
 
     let attempts = 0;
-    const maxAttempts = 20;
+    const maxAttempts = 30;
 
     intervalRef.current = setInterval(() => {
       attempts++;
-      console.log(`Polling connection... attempt ${attempts}`);
+      console.log(`Polling for connection... ${attempts}/${maxAttempts}`);
 
-      // Check if connected
+      // Check if already connected
       if (isConnected) {
-        console.log("Connection detected!");
-        setUiStatus("Connected ✅");
+        console.log("Connected!");
+        setUiStatus("✅ Connected!");
         setIsLoading(false);
         connectingRef.current = false;
+        setShowQR(false);
         clearInterval(intervalRef.current);
         intervalRef.current = null;
         return;
       }
 
-      // Check for any WalletConnect session in localStorage
+      // Check localStorage for WalletConnect session
       const hasSession = Object.keys(localStorage).some(key => 
         key.includes("walletconnect") && localStorage.getItem(key)
       );
 
       if (hasSession && !isConnected) {
-        console.log("Found WalletConnect session, trying to reconnect...");
-        // Try to reconnect
-        const wcConnector = getWCConnector();
+        console.log("Found session, trying to connect...");
+        const wcConnector = connectors.find(c => c.id === "walletConnect");
         if (wcConnector) {
-          connect({ connector: wcConnector }).then(() => {
-            console.log("Reconnection attempt made");
-          }).catch(err => {
-            console.log("Reconnection failed:", err);
-          });
+          connect({ connector: wcConnector })
+            .then(() => {
+              console.log("Connection successful!");
+            })
+            .catch(err => {
+              console.log("Connection attempt failed:", err);
+            });
         }
       }
 
-      // Timeout after max attempts
+      // Timeout
       if (attempts >= maxAttempts) {
         console.log("Polling timeout");
-        setUiStatus("⏱️ Connection timeout. Tap retry.");
+        setUiStatus("⏱️ Connection timeout. Try again.");
         setIsLoading(false);
         connectingRef.current = false;
+        setShowQR(false);
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
@@ -97,92 +139,11 @@ export default function Wallet() {
   };
 
   // -------------------------
-  // CONNECT TO WALLETCONNECT
-  // -------------------------
-  const connectToWalletConnect = async () => {
-    if (connectingRef.current || isLoading) {
-      console.log("Already connecting...");
-      return;
-    }
-
-    // Cleanup
-    if (isConnected) {
-      await disconnect();
-      cleanupSessions();
-    }
-
-    // Clean any existing intervals
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-
-    connectingRef.current = true;
-    setIsLoading(true);
-    setConnectionAttempt(prev => prev + 1);
-    setUiStatus("🔄 Opening Trust Wallet...");
-
-    try {
-      const wcConnector = getWCConnector();
-      if (!wcConnector) {
-        throw new Error("WalletConnect connector not found");
-      }
-
-      console.log("Initiating WalletConnect connection...");
-
-      // Start the connection
-      await connect({ connector: wcConnector });
-
-      // Update status
-      setUiStatus("📱 Approve in Trust Wallet");
-
-      // Wait a moment then start polling
-      setTimeout(() => {
-        if (!isConnected && connectingRef.current) {
-          setUiStatus("📱 Approve in Trust Wallet & return to Telegram");
-          startPolling();
-        }
-      }, 2000);
-
-      // Overall timeout
-      timeoutRef.current = setTimeout(() => {
-        if (!isConnected && connectingRef.current) {
-          setUiStatus("⏱️ Connection timeout. Tap retry.");
-          setIsLoading(false);
-          connectingRef.current = false;
-          if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
-          }
-        }
-      }, 30000);
-
-    } catch (err) {
-      console.error("Connection error:", err);
-      
-      // Check if it's a modal close/error
-      if (err.message?.includes("closed") || err.message?.includes("reject")) {
-        setUiStatus("❌ Connection rejected. Tap retry.");
-      } else {
-        setUiStatus(`❌ Error: ${err.message?.slice(0, 40) || "Connection failed"}`);
-      }
-      
-      setIsLoading(false);
-      connectingRef.current = false;
-    }
-  };
-
-  // -------------------------
-  // HANDLE CONNECTION WITH DIRECT DEEP LINK
+  // CONNECT WITH DEEP LINK (Alternative)
   // -------------------------
   const connectWithDeepLink = async () => {
     if (connectingRef.current || isLoading) return;
-
-    // Cleanup
+    
     cleanupSessions();
     if (isConnected) {
       await disconnect();
@@ -190,44 +151,31 @@ export default function Wallet() {
 
     connectingRef.current = true;
     setIsLoading(true);
-    setUiStatus("🔗 Generating connection...");
+    setShowQR(false);
+    setUiStatus("🔗 Opening Trust Wallet...");
 
     try {
-      // Create a new WalletConnect connector with specific options
-      const wcConnector = walletConnect({
-        projectId: projectId,
-        showQrModal: true,
-        qrModalOptions: {
-          themeMode: 'dark',
-          themeVariables: {
-            '--wcm-z-index': '9999',
-          }
-        },
-        metadata: {
-          name: "BARIN Game",
-          description: "BARIN Game Mini App",
-          url: "https://barin-app.vercel.app",
-          icons: ["https://barin-app.vercel.app/icon.png"],
-        },
-      });
+      const wcConnector = connectors.find(c => c.id === "walletConnect");
+      if (!wcConnector) {
+        throw new Error("WalletConnect connector not found");
+      }
 
-      // Connect using the new connector
+      // Try to connect with deep link
       await connect({ connector: wcConnector });
-
-      setUiStatus("📱 Check Trust Wallet");
       
-      // Start polling
+      setUiStatus("📱 Approve in Trust Wallet");
+      
+      // Start polling after a delay
       setTimeout(() => {
         if (!isConnected && connectingRef.current) {
-          setUiStatus("📱 Approve in Trust Wallet & return");
-          startPolling();
+          startPollingForConnection();
         }
-      }, 3000);
+      }, 2000);
 
       // Timeout
       timeoutRef.current = setTimeout(() => {
         if (!isConnected && connectingRef.current) {
-          setUiStatus("⏱️ Timeout. Try again.");
+          setUiStatus("⏱️ Timeout. Try QR code.");
           setIsLoading(false);
           connectingRef.current = false;
           if (intervalRef.current) {
@@ -239,9 +187,25 @@ export default function Wallet() {
 
     } catch (err) {
       console.error("Deep link error:", err);
-      setUiStatus("❌ Connection failed. Tap retry.");
+      setUiStatus("❌ Connection failed. Try QR code.");
       setIsLoading(false);
       connectingRef.current = false;
+    }
+  };
+
+  // -------------------------
+  // COPY URI TO CLIPBOARD
+  // -------------------------
+  const copyUriToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(wcUri);
+      setUiStatus("✅ URI copied! Open Trust Wallet manually");
+      setTimeout(() => {
+        setUiStatus("📱 Scan QR or paste URI in Trust Wallet");
+      }, 2000);
+    } catch (err) {
+      console.error("Copy failed:", err);
+      setUiStatus("❌ Copy failed. Try QR code.");
     }
   };
 
@@ -249,12 +213,13 @@ export default function Wallet() {
   // MONITOR CONNECTION STATUS
   // -------------------------
   useEffect(() => {
-    console.log("Status changed:", { status, isConnected, address });
+    console.log("Status:", { status, isConnected, address });
     
     if (isConnected && address) {
       setUiStatus(`✅ Connected ${address.slice(0, 6)}...${address.slice(-4)}`);
       setIsLoading(false);
       connectingRef.current = false;
+      setShowQR(false);
       
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -277,21 +242,18 @@ export default function Wallet() {
         window.dispatchEvent(new Event("focus"));
         window.dispatchEvent(new Event("resize"));
         
-        // If we were connecting, try to check status
         if (connectingRef.current && !isConnected) {
           setUiStatus("🔄 Checking connection...");
           
           // Force a status check
-          const wcConnector = getWCConnector();
+          const wcConnector = connectors.find(c => c.id === "walletConnect");
           if (wcConnector) {
-            // Check if there's a session
             const hasSession = Object.keys(localStorage).some(key => 
               key.includes("walletconnect") && localStorage.getItem(key)
             );
             
             if (hasSession) {
-              console.log("Found session, attempting to finalize connection");
-              // Try to reconnect
+              console.log("Found session, finalizing connection");
               connect({ connector: wcConnector }).catch(console.log);
             }
           }
@@ -300,14 +262,13 @@ export default function Wallet() {
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [isConnected]);
 
   // -------------------------
-  // DISCONNECT
+  // HANDLE DISCONNECT
   // -------------------------
   const handleDisconnect = async () => {
     try {
@@ -316,6 +277,7 @@ export default function Wallet() {
       setUiStatus("Disconnected");
       setIsLoading(false);
       connectingRef.current = false;
+      setShowQR(false);
       
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -358,24 +320,6 @@ export default function Wallet() {
           {uiStatus}
         </p>
         
-        {/* RETRY BUTTON */}
-        {!isConnected && (uiStatus.includes("retry") || uiStatus.includes("Timeout") || uiStatus.includes("Error")) && (
-          <div className="mt-3 flex gap-2 justify-center">
-            <button
-              onClick={connectToWalletConnect}
-              className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg transition-colors text-sm"
-            >
-              🔄 Retry Connection
-            </button>
-            <button
-              onClick={connectWithDeepLink}
-              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors text-sm"
-            >
-              🔗 Try Alternative
-            </button>
-          </div>
-        )}
-        
         {isConnected && (
           <button
             onClick={handleDisconnect}
@@ -390,30 +334,62 @@ export default function Wallet() {
             <div className="h-full bg-gradient-to-r from-purple-500 to-blue-500 animate-pulse w-1/2 rounded-full"></div>
           </div>
         )}
-        
-        {connectionAttempt > 0 && !isConnected && (
-          <p className="mt-2 text-xs text-gray-500">Attempt #{connectionAttempt}</p>
-        )}
       </div>
 
-      {/* WALLET BUTTONS */}
+      {/* QR CODE SECTION */}
+      {showQR && wcUri && (
+        <div className="bg-slate-900 border border-purple-500/30 rounded-xl p-6 mb-6 text-center">
+          <h3 className="text-lg font-bold text-purple-400 mb-4">Scan QR Code</h3>
+          <div className="bg-white p-4 rounded-lg inline-block mx-auto mb-4">
+            <img 
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(wcUri)}`}
+              alt="WalletConnect QR Code"
+              className="w-48 h-48 mx-auto"
+            />
+          </div>
+          <p className="text-sm text-gray-400 mb-4">
+            Open Trust Wallet → Scan QR code → Approve connection
+          </p>
+          <button
+            onClick={copyUriToClipboard}
+            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm transition-colors"
+          >
+            📋 Copy URI Instead
+          </button>
+          <p className="text-xs text-gray-500 mt-3">
+            After scanning, return to Telegram. The app will auto-detect.
+          </p>
+        </div>
+      )}
+
+      {/* ACTION BUTTONS */}
       <div className="space-y-3">
         <button
-          onClick={connectToWalletConnect}
+          onClick={generateWalletConnectURI}
           disabled={isLoading}
           className={`w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-xl p-4 transition-colors ${
             isLoading ? "opacity-50 cursor-not-allowed" : ""
           }`}
         >
           <div className="flex items-center justify-center gap-3">
-            <span className="text-lg font-bold">Trust Wallet</span>
-            <span className="text-sm bg-white/20 px-2 py-1 rounded">via WalletConnect</span>
+            <span className="text-lg font-bold">📱 Connect with QR</span>
+          </div>
+        </button>
+
+        <button
+          onClick={connectWithDeepLink}
+          disabled={isLoading}
+          className={`w-full bg-slate-900 border border-slate-700 hover:border-blue-500 rounded-xl p-4 transition-colors ${
+            isLoading ? "opacity-50 cursor-not-allowed" : ""
+          }`}
+        >
+          <div className="flex items-center justify-center gap-3">
+            <span className="text-lg">🔗 Try Deep Link</span>
           </div>
         </button>
 
         <button
           onClick={() => {
-            // For MetaMask
             const connector = connectors.find(c => c.id === "metaMaskSDK");
             if (connector) connect({ connector });
           }}
@@ -423,36 +399,21 @@ export default function Wallet() {
           }`}
         >
           <div className="flex items-center justify-center gap-3">
-            <span className="text-lg">MetaMask</span>
-          </div>
-        </button>
-
-        <button
-          onClick={() => {
-            const connector = connectors.find(c => c.id === "coinbaseWalletSDK");
-            if (connector) connect({ connector });
-          }}
-          disabled={isLoading}
-          className={`w-full bg-slate-900 border border-slate-700 hover:border-blue-500 rounded-xl p-4 transition-colors ${
-            isLoading ? "opacity-50 cursor-not-allowed" : ""
-          }`}
-        >
-          <div className="flex items-center justify-center gap-3">
-            <span className="text-lg">Coinbase Wallet</span>
+            <span className="text-lg">🦊 MetaMask</span>
           </div>
         </button>
       </div>
       
-      {/* DETAILED INSTRUCTIONS */}
+      {/* INSTRUCTIONS */}
       <div className="mt-6 text-xs text-gray-500 text-center bg-slate-900/50 rounded-lg p-4 border border-slate-800">
-        <p className="text-gray-400 font-medium mb-2">📋 How to Connect:</p>
-        <p>1️⃣ Tap <span className="text-purple-400 font-medium">Trust Wallet</span> button above</p>
-        <p>2️⃣ Trust Wallet will open automatically</p>
-        <p>3️⃣ Enter your password and unlock</p>
+        <p className="text-gray-400 font-medium mb-2">📋 How to Connect with QR:</p>
+        <p>1️⃣ Tap <span className="text-purple-400 font-medium">"Connect with QR"</span></p>
+        <p>2️⃣ QR code will appear on screen</p>
+        <p>3️⃣ Open Trust Wallet → Scan QR code</p>
         <p>4️⃣ Tap <span className="text-green-400">"Connect"</span> or <span className="text-green-400">"Approve"</span></p>
-        <p>5️⃣ <span className="text-yellow-400 font-medium">Manually return to Telegram</span></p>
+        <p>5️⃣ <span className="text-yellow-400 font-medium">Return to Telegram</span></p>
         <p className="text-blue-400 mt-2">⏳ The app will auto-detect your return</p>
-        <p className="text-gray-600 mt-2">If it doesn't work, try the <span className="text-blue-400">"Try Alternative"</span> button</p>
+        <p className="text-gray-600 mt-2">If deep link doesn't work, use QR code method</p>
       </div>
     </div>
   );
