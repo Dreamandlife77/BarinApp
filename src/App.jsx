@@ -18,11 +18,9 @@ import { useEffect } from "react";
 
 function App() {
 
-    // ❌ DO NOT CLEAR WALLET STATE EVERY LOAD
-    // WalletConnect needs persistence
-
+    // Only log app start (NO wallet logic here)
     useEffect(() => {
-        console.log("App started");
+        console.log("🚀 App started");
     }, []);
 
     return (
