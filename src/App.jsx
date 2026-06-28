@@ -18,9 +18,9 @@ import { useEffect } from "react";
 
 function App() {
 
-    // Only log app start (NO wallet logic here)
+    // ❌ DO NOT clear wallet storage (BREAKS WALLET)
     useEffect(() => {
-        console.log("🚀 App started");
+        console.log("App loaded");
     }, []);
 
     return (
