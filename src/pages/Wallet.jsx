@@ -10,75 +10,44 @@ export default function Wallet() {
 
     const [loading, setLoading] = useState(false);
 
-    // 🔥 detect state
-    useEffect(() => {
-        console.log("Wallet state:", { isConnected, address });
-    }, [isConnected, address]);
-
     const connectWallet = async () => {
+
+        setLoading(true);
 
         try {
 
-            setLoading(true);
-
-            console.log("Opening wallet...");
-
-            // IMPORTANT: DO NOT WAIT FOR RETURN
+            // 🔥 DO NOT WAIT FOR RETURN
             open({ view: "Connect" });
 
-            // fallback UI unlock (Telegram fix)
+            // 🔥 force UI check loop (important)
             setTimeout(() => {
                 setLoading(false);
-                console.log("Waiting for wallet sync...");
-            }, 4000);
+            }, 5000);
 
-        } catch (err) {
-
-            console.log("Wallet error:", err);
+        } catch (e) {
+            console.log(e);
             setLoading(false);
         }
     };
 
     return (
-        <div style={{ padding: 20 }}>
+        <div>
 
             {!isConnected ? (
 
-                <button
-                    onClick={connectWallet}
-                    disabled={loading}
-                    style={{
-                        padding: "10px 20px",
-                        background: loading ? "gray" : "green",
-                        color: "white",
-                        borderRadius: 8,
-                        border: "none"
-                    }}
-                >
-                    {loading ? "Connecting..." : "Connedct Wallet"}
+                <button onClick={connectWallet} disabled={loading}>
+                    {loading ? "Connecting..." : "Connect Wallet"}
                 </button>
 
             ) : (
 
                 <div>
+                    <p>Connected</p>
+                    <p>{address}</p>
 
-                    <h3>✅ Connected</h3>
-                    <p style={{ fontSize: 12 }}>{address}</p>
-
-                    <button
-                        onClick={() => disconnect()}
-                        style={{
-                            marginTop: 10,
-                            padding: "8px 16px",
-                            background: "red",
-                            color: "white",
-                            border: "none",
-                            borderRadius: 8
-                        }}
-                    >
+                    <button onClick={() => disconnect()}>
                         Disconnect
                     </button>
-
                 </div>
 
             )}
