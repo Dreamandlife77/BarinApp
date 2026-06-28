@@ -9,18 +9,76 @@ export default function Wallet() {
   const [status, setStatus] = useState("Not Connected");
   const lock = useRef(false);
 
-  // 🔥 FIX 1: FORCE SESSION RECOVERY LOOP
+  // -----------------------------
+  // 🔥 ALERT DEBUG FUNCTION
+  // -----------------------------
+  const debugAlert = (title, data) => {
+    alert(
+      `${title}\n\n` +
+      JSON.stringify(data, null, 2)
+    );
+  };
+
+  // -----------------------------
+  // 🔥 CHECK SESSION EVERY 2s
+  // -----------------------------
   useEffect(() => {
     const interval = setInterval(() => {
-      // forces wagmi to re-check stored session
-      window.dispatchEvent(new Event("focus"));
-    }, 1000);
+      const wcKeys = Object.keys(localStorage).filter(k =>
+        k.includes("wc") || k.includes("walletconnect")
+      );
+
+      const wagmiKeys = Object.keys(localStorage).filter(k =>
+        k.includes("wagmi")
+      );
+
+      debugAlert("SESSION CHECK", {
+        isConnected,
+        address,
+        wcKeys,
+        wagmiKeys
+      });
+
+    }, 5000); // every 5 sec (not too spammy)
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isConnected, address]);
 
-  // 🔥 FIX 2: REAL STATE DETECTION (THIS FIXES YOUR STUCK LOADING)
+  // -----------------------------
+  // 🔥 CONNECT WALLET
+  // -----------------------------
+  const handleConnect = (id) => {
+    if (lock.current) return;
+    lock.current = true;
+
+    const connector = connectors.find(c => c.id === id);
+
+    if (!connector) {
+      alert("Connector not found: " + id);
+      return;
+    }
+
+    alert("STEP 1: Opening wallet...");
+
+    connect({ connector });
+
+    alert("STEP 2: Approve in wallet then return");
+
+    setTimeout(() => {
+      lock.current = false;
+    }, 3000);
+  };
+
+  // -----------------------------
+  // 🔥 STATE TRACKING
+  // -----------------------------
   useEffect(() => {
+    debugAlert("STATE UPDATE", {
+      isConnected,
+      address,
+      status
+    });
+
     if (isConnected && address) {
       setStatus("Connected ✅");
     } else {
@@ -28,83 +86,36 @@ export default function Wallet() {
     }
   }, [isConnected, address]);
 
-  // 🔥 FIX 3: SAFE CONNECT (NO WAITING FOR RETURN EVENT)
-  const handleConnect = (id) => {
-    if (lock.current) return;
-    lock.current = true;
-
-    const connector = connectors.find((c) => c.id === id);
-    if (!connector) return;
-
-    setStatus("Opening wallet...");
-
-    connect({ connector });
-
-    setStatus("Approve wallet → then return here");
-
-    setTimeout(() => {
-      lock.current = false;
-    }, 2000);
-  };
-
-  // 🔥 AUTO NEXT STEP (IMPORTANT)
-  useEffect(() => {
-    if (isConnected && address) {
-      console.log("Wallet connected → move to next step");
-
-      // 👉 HERE YOU GO NEXT PAGE
-      // navigate("/game") OR whatever you need
-    }
-  }, [isConnected, address]);
-
+  // -----------------------------
+  // UI
+  // -----------------------------
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-4">
+    <div className="min-h-screen bg-black text-white p-4">
 
-      {/* STATUS */}
-      <div className="bg-slate-900 p-4 rounded-xl mb-4">
-        <h2 className="text-yellow-400 font-bold">
-          Wallet Status
-        </h2>
+      <div className="bg-gray-900 p-4 rounded">
+        <h2>Wallet Debug Panel</h2>
 
-        <p className="text-gray-300 break-all">
-          {address || "No wallet"}
-        </p>
-
-        <p className="text-cyan-400 mt-2">
-          {status}
-        </p>
+        <p>{address || "No Address"}</p>
+        <p>{status}</p>
 
         {isConnected && (
-          <button
-            className="mt-3 bg-red-500 px-4 py-2 rounded"
-            onClick={() => disconnect()}
-          >
+          <button onClick={() => disconnect()}>
             Disconnect
           </button>
         )}
       </div>
 
-      {/* BUTTONS */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2 mt-4">
 
-        <button
-          className="bg-slate-800 p-3 rounded"
-          onClick={() => handleConnect("metaMaskSDK")}
-        >
+        <button onClick={() => handleConnect("metaMaskSDK")}>
           MetaMask
         </button>
 
-        <button
-          className="bg-slate-800 p-3 rounded"
-          onClick={() => handleConnect("walletConnect")}
-        >
-          WalletConnect
+        <button onClick={() => handleConnect("walletConnect")}>
+          WalletConnect1
         </button>
 
-        <button
-          className="bg-slate-800 p-3 rounded"
-          onClick={() => handleConnect("coinbaseWalletSDK")}
-        >
+        <button onClick={() => handleConnect("coinbaseWalletSDK")}>
           Coinbase
         </button>
 
