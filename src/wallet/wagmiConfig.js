@@ -1,6 +1,10 @@
 import { createConfig, http } from "wagmi";
 import { polygon } from "wagmi/chains";
-import { metaMask, walletConnect, coinbaseWallet } from "wagmi/connectors";
+import {
+  metaMask,
+  walletConnect,
+  coinbaseWallet,
+} from "wagmi/connectors";
 
 const projectId = "beb23aec824ef375771f0418bffcfd14";
 
