@@ -1,53 +1,38 @@
 import { useEffect, useRef, useState } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
-import { useQueryClient } from "@tanstack/react-query";
 
 export default function Wallet() {
-
-  // ✅ MUST be inside component
-  const queryClient = useQueryClient();
-
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, status } = useAccount();
   const { connectors, connect } = useConnect();
   const { disconnect } = useDisconnect();
 
-  const [status, setStatus] = useState("Not Connected");
+  const [ui, setUi] = useState("Not Connected");
   const lock = useRef(false);
 
-  // ----------------------------
-  // FIX 1: FORCE RETURN DETECTION
-  // ----------------------------
+  // 🔥 CRITICAL FIX 1: FORCE REHYDRATION LOOP
   useEffect(() => {
-    const onReturn = () => {
-      console.log("🔄 User returned from wallet");
+    const interval = setInterval(() => {
+      // this forces wagmi internal re-check
+      window.dispatchEvent(new Event("focus"));
+    }, 800);
 
-      // force wagmi + react-query refresh
-      queryClient.invalidateQueries();
+    return () => clearInterval(interval);
+  }, []);
+
+  // 🔥 CRITICAL FIX 2: HARD SESSION CHECK
+  useEffect(() => {
+    const checkConnection = () => {
+      if (isConnected && address) {
+        setUi("Connected ✅");
+      } else {
+        setUi("Not Connected");
+      }
     };
 
-    window.addEventListener("focus", onReturn);
-    window.addEventListener("visibilitychange", onReturn);
-
-    return () => {
-      window.removeEventListener("focus", onReturn);
-      window.removeEventListener("visibilitychange", onReturn);
-    };
-  }, [queryClient]);
-
-  // ----------------------------
-  // FIX 2: REAL CONNECTION STATE
-  // ----------------------------
-  useEffect(() => {
-    if (isConnected && address) {
-      setStatus("Connected ✅");
-    } else {
-      setStatus("Not Connected");
-    }
+    checkConnection();
   }, [isConnected, address]);
 
-  // ----------------------------
-  // FIX 3: CONNECT WALLET SAFELY
-  // ----------------------------
+  // 🔥 CRITICAL FIX 3: CONNECT
   const handleConnect = (id) => {
     if (lock.current) return;
     lock.current = true;
@@ -55,33 +40,30 @@ export default function Wallet() {
     const connector = connectors.find((c) => c.id === id);
     if (!connector) return;
 
-    setStatus("Opening wallet...");
+    setUi("Opening wallet...");
 
     connect({ connector });
 
-    setStatus("Approve in wallet and return");
+    setUi("Approve in wallet → then return");
 
     setTimeout(() => {
       lock.current = false;
-    }, 3000);
+    }, 2500);
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-4">
 
-      {/* STATUS CARD */}
-      <div className="bg-slate-900 p-4 rounded-xl mb-4 border border-slate-800">
+      {/* STATUS */}
+      <div className="bg-slate-900 p-4 rounded-xl mb-4">
+        <h2 className="text-yellow-400 font-bold">Wallet Status</h2>
 
-        <h2 className="text-yellow-400 font-bold">
-          Wallet Status
-        </h2>
-
-        <p className="text-gray-300 break-all">
-          {address ? address : "Not Connected"}
+        <p className="break-all text-gray-300">
+          {address || "No address"}
         </p>
 
         <p className="text-cyan-400 mt-2">
-          {status}
+          {ui}
         </p>
 
         {isConnected && (
@@ -92,35 +74,33 @@ export default function Wallet() {
             Disconnect
           </button>
         )}
-
       </div>
 
       {/* BUTTONS */}
       <div className="grid grid-cols-3 gap-3">
 
         <button
-          className="bg-slate-800 p-3 rounded hover:bg-slate-700"
+          className="bg-slate-800 p-3 rounded"
           onClick={() => handleConnect("metaMaskSDK")}
         >
           MetaMask
         </button>
 
         <button
-          className="bg-slate-800 p-3 rounded hover:bg-slate-700"
+          className="bg-slate-800 p-3 rounded"
           onClick={() => handleConnect("walletConnect")}
         >
-          WalletConnect
+          WalletConssnect
         </button>
 
         <button
-          className="bg-slate-800 p-3 rounded hover:bg-slate-700"
+          className="bg-slate-800 p-3 rounded"
           onClick={() => handleConnect("coinbaseWalletSDK")}
         >
           Coinbase
         </button>
 
       </div>
-
     </div>
   );
 }
